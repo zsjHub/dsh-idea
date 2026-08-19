@@ -1,0 +1,8 @@
+# 防止误提交密钥/本地数据（仓库副本一律脱敏，真实密钥只存在于本机 ~/.dsh）
+.credentials*
+*.local.yml
+.dsh/
+attachments/
+
+# playwright ���Բ���
+.playwright-mcp/

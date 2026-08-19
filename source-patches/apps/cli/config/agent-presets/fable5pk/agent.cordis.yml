@@ -1,0 +1,121 @@
+# The `fable5pk` agent preset: 极简Fable5PK版 — minimal mode with platform-adaptive shell
+# and a curated set of standard-mode tools.
+#
+# This preset is BASED ON the minimal preset, with the following changes:
+# 1. Platform-adaptive shell (tool-bash on Unix, tool-pwsh on Windows) replaces
+#    the bash-only persistent shell, to handle Windows incompatibility with Bash.
+# 2. Selected tools from the standard preset are added: file operations (tool-fs,
+#    tool-fs-search), web search (tool-web), todo (tool-todo), ask user
+#    (tool-ask-user), background jobs (tool-jobs), skills (tool-skill +
+#    skill-filesystem), and goals (tool-goal).
+#
+# Everything NOT listed below follows the minimal mode's approach: a simple
+# persona that is the complete system prompt, no runtime context, no plan mode,
+# no delegation/workflows, no compaction, no agent-instructions.
+
+# ── identity ────────────────────────────────────────────────────────────────
+
+# The preset's own persona, shadowing the deployment default for this agent.
+# `complete: true` makes this the ENTIRE system prompt (no other sections).
+# `includeRuntimeContext: false` suppresses runtime-context snapshots.
+- id: persona
+  name: '@deepseek-ai/dsh-persona'
+  config:
+    text: You are a helpful software engineer assistant.
+    complete: true
+    includeRuntimeContext: false
+
+# ── shell (platform-adaptive) ───────────────────────────────────────────────
+#
+# Unlike the minimal preset's bash-only persistent shell, this preset uses the
+# platform-adaptive approach: Bash on Unix, PowerShell on Windows. Each tool
+# is disabled on the platform it does not support, so the model sees only the
+# shell that works on its current OS.
+- id: tool-bash
+  name: '@deepseek-ai/dsh-tool-bash'
+  disabled: !!js process.platform === 'win32'
+
+- id: tool-pwsh
+  name: '@deepseek-ai/dsh-tool-pwsh'
+  disabled: !!js process.platform !== 'win32'
+
+# ── filesystem ──────────────────────────────────────────────────────────────
+#
+# The bare local filesystem shadows the host's sandboxed provider only for this
+# preset. The editor shares that realm and requires absolute paths.
+- id: filesystem
+  name: cordis:group
+  group: true
+  isolate:
+    fs: true
+  config:
+    - id: fs-local
+      name: '@deepseek-ai/dsh-fs-local'
+      config:
+        cwd: !!js process.env.DSH_CWD ?? process.cwd()
+
+    - id: str-replace-editor
+      name: '@deepseek-ai/dsh-tool-str-replace-editor'
+      config:
+        maxOutputChars: 16000
+
+# ── file operations (from standard) ─────────────────────────────────────────
+#
+# General-purpose file read/write and search tools, using the host's fs service
+# (outside the isolated filesystem realm above).
+- id: tool-fs
+  name: '@deepseek-ai/dsh-tool-fs'
+
+- id: tool-fs-search
+  name: '@deepseek-ai/dsh-tool-fs-search'
+  config:
+    sampleOverCapGlobResults: false
+
+# ── background jobs ─────────────────────────────────────────────────────────
+#
+# Only the model-facing controls. The task REGISTRY stays on the host plane:
+# its producers sit outside any realm this file could put it in. The registry
+# is keyed by owning agent anyway, so one host instance serves every session.
+# What a preset chooses is whether its agent can collect and stop background
+# work at all.
+- id: tool-jobs
+  name: '@deepseek-ai/dsh-tool-jobs'
+
+# ── skills ──────────────────────────────────────────────────────────────────
+#
+# The skill REGISTRY lives in the host composition and is layered per scope:
+# these rows register into THIS preset's layer of it, so they need no realm.
+# `skill-filesystem` contributes local-root discovery for agents on this
+# preset, and `tool-skill` gives them the catalog and loader.
+- id: skill-filesystem
+  name: '@deepseek-ai/dsh-skill-filesystem'
+
+- id: tool-skill
+  name: '@deepseek-ai/dsh-tool-skill'
+
+# ── goals ───────────────────────────────────────────────────────────────────
+#
+# Only the model-facing tool. The goal SERVICE, its session driver, and the
+# `/goal` command stay on the host plane. The registry is keyed by session
+# anyway, so one host instance serves every session. What a preset chooses is
+# whether its agent can call the goal tool.
+- id: tool-goal
+  name: '@deepseek-ai/dsh-tool-goal'
+
+# ── remaining model-facing rows ─────────────────────────────────────────────
+
+- id: tool-ask-user
+  name: '@deepseek-ai/dsh-tool-ask-user'
+
+- id: tool-todo
+  name: '@deepseek-ai/dsh-tool-todo'
+  config:
+    allowParallelInProgress: true
+
+# The `web` service and its search provider stay in the host composition; only
+# the model-facing tool is per-session.
+- id: tool-web
+  name: '@deepseek-ai/dsh-tool-web'
+  config:
+    fetch: false
+    searchTimeoutMs: 60000
