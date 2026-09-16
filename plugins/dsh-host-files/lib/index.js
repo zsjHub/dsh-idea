@@ -141,6 +141,460 @@ function gitStatusOf(root) {
 	});
 }
 
+/** 获取文件 diff（支持 staged/unstaged）。 */
+function gitDiffOf(root, file, staged) {
+	return new Promise((resolve) => {
+		const args = ["-C", root, "diff"];
+		if (staged) args.push("--cached");
+		args.push("--", file);
+		execFile("git", args, { timeout: 8000, maxBuffer: 8 * 1024 * 1024, windowsHide: true }, (error, stdout) => {
+			if (error) return resolve({ ok: false, error: error.message });
+			resolve({ ok: true, diff: stdout });
+		});
+	});
+}
+
+/** 获取提交历史。 */
+function gitLogOf(root, maxCount) {
+	return new Promise((resolve) => {
+		execFile("git", ["-C", root, "log", "--max-count=" + (maxCount || 50), "--format=%H|%ai|%an|%s", "--no-color"], {
+			timeout: 8000, maxBuffer: 8 * 1024 * 1024, windowsHide: true
+		}, (error, stdout) => {
+			if (error) return resolve({ ok: false, notRepo: true, error: error.message });
+			const commits = [];
+			for (const line of stdout.split(/\r?\n/)) {
+				if (line.length === 0) continue;
+				const parts = line.split("|");
+				commits.push({ hash: parts[0] || "", date: parts[1] || "", author: parts[2] || "", message: parts.slice(3).join("|") || "" });
+			}
+			resolve({ ok: true, commits });
+		});
+	});
+}
+
+/** 提交图谱数据：带 parent 哈希和 refs（分支/标签）。 */
+function gitGraphData(root, maxCount) {
+	return new Promise((resolve) => {
+		Promise.all([
+			new Promise((r) => execFile("git", ["-C", root, "log", "--max-count=" + (maxCount || 50), "--format=%H||%P||%ai||%an||%s||%D", "--no-color", "--topo-order"], {
+				timeout: 10000, maxBuffer: 16 * 1024 * 1024, windowsHide: true
+			}, (e, o) => r(e ? "" : o))),
+			new Promise((r) => execFile("git", ["-C", root, "branch", "--format=%(HEAD)%00%(refname:short)%00%(objectname)"], {
+				timeout: 5000, maxBuffer: 8 * 1024 * 1024, windowsHide: true
+			}, (e, o) => r(e ? "" : o))),
+		]).then(([logOut, branchOut]) => {
+			if (!logOut) return resolve({ ok: false, error: "not a git repository" });
+			// 解析分支
+			const branchMap = {}; // sha -> [{kind, name, head}]
+			for (const line of branchOut.split(/\r?\n/)) {
+				if (!line) continue;
+				const parts = line.split("\0");
+				if (parts.length < 3) continue;
+				const isHead = parts[0] === "*";
+				const name = parts[1] || "";
+				const sha = parts[2] || "";
+				if (!sha) continue;
+				if (!branchMap[sha]) branchMap[sha] = [];
+				branchMap[sha].push({ kind: "branch", name, head: isHead });
+			}
+			// 解析提交
+			const commits = [];
+			for (const line of logOut.split(/\r?\n/)) {
+				if (!line) continue;
+				const parts = line.split("||");
+				const hash = parts[0] || "";
+				const parents = parts[1] ? parts[1].trim().split(/\s+/) : [];
+				const date = parts[2] || "";
+				const author = parts[3] || "";
+				const subject = parts[4] || "";
+				const refStr = parts[5] || "";
+				// 解析 refs
+				const refs = [];
+				if (refStr) {
+					for (const ref of refStr.split(", ")) {
+						const t = ref.trim();
+						if (!t) continue;
+						if (t.startsWith("tag: ")) refs.push({ kind: "tag", name: t.slice(5) });
+						else refs.push({ kind: "branch", name: t });
+					}
+				}
+				// 合并分支映射中的 refs
+				if (branchMap[hash]) {
+					for (const b of branchMap[hash]) {
+						if (!refs.some((r) => r.name === b.name)) refs.push(b);
+					}
+				}
+				commits.push({ hash, parents: parents.filter(Boolean), date, author, subject, refs });
+			}
+			resolve({ ok: true, commits });
+		});
+	});
+}
+
+/** 暂存文件。 */
+function gitStageFiles(root, files) {
+	return new Promise((resolve) => {
+		execFile("git", ["-C", root, "add", "--", ...files], { timeout: 15000, windowsHide: true }, (error) => {
+			if (error) return resolve({ ok: false, error: error.message });
+			resolve({ ok: true });
+		});
+	});
+}
+
+/** 取消暂存。 */
+function gitUnstageFiles(root, files) {
+	return new Promise((resolve) => {
+		execFile("git", ["-C", root, "restore", "--staged", "--", ...files], { timeout: 15000, windowsHide: true }, (error) => {
+			if (error) return resolve({ ok: false, error: error.message });
+			resolve({ ok: true });
+		});
+	});
+}
+
+/** 提交暂存区。 */
+function gitCommit(root, message) {
+	return new Promise((resolve) => {
+		execFile("git", ["-C", root, "commit", "-m", message], { timeout: 15000, windowsHide: true }, (error, stdout) => {
+			if (error) return resolve({ ok: false, error: error.message });
+			resolve({ ok: true, output: stdout });
+		});
+	});
+}
+
+/** 还原文件（工作区）。 */
+function gitRestoreFile(root, files) {
+	return new Promise((resolve) => {
+		execFile("git", ["-C", root, "restore", "--", ...files], { timeout: 15000, windowsHide: true }, (error) => {
+			if (error) return resolve({ ok: false, error: error.message });
+			resolve({ ok: true });
+		});
+	});
+}
+
+/** 发现子仓库：扫描目录树找 .git。 */
+function gitDiscoverRepos(root) {
+	return new Promise((resolve) => {
+		execFile("git", ["-C", root, "rev-parse", "--show-toplevel"], { timeout: 5000, windowsHide: true }, (error, stdout) => {
+			if (error) {
+				discoverReposIn(root, 0, (repos) => resolve(repos));
+				return;
+			}
+			const top = stdout.trim().replace(/\\/g, "/");
+			discoverReposIn(root, 0, (repos) => {
+				const set = new Set([top, ...repos]);
+				resolve([...set]);
+			});
+		});
+	});
+}
+async function discoverReposIn(dir, depth, callback) {
+	const repos = [];
+	if (depth > 5) return callback(repos);
+	let entries;
+	try {
+		entries = await readdir(dir, { withFileTypes: true });
+	} catch {
+		return callback(repos);
+	}
+	let pending = 0;
+	function checkDone() {
+		if (pending === 0) callback(repos);
+	}
+	for (const entry of entries) {
+		if (entry.name === ".git" && entry.isDirectory()) {
+			repos.push(dir.replace(/\\/g, "/"));
+			continue;
+		}
+		if (entry.isDirectory() && !isHiddenName(entry.name)) {
+			pending++;
+			const full = join(dir, entry.name);
+			discoverReposIn(full, depth + 1, (sub) => {
+				repos.push(...sub);
+				pending--;
+				checkDone();
+			});
+		}
+	}
+	checkDone();
+}
+
+/** 列出 worktrees。 */
+function gitWorktrees(root) {
+	return new Promise((resolve) => {
+		execFile("git", ["-C", root, "worktree", "list", "--porcelain"], { timeout: 8000, maxBuffer: 8 * 1024 * 1024, windowsHide: true }, (error, stdout) => {
+			if (error) return resolve({ ok: false, error: error.message });
+			const worktrees = [];
+			let current = {};
+			for (const line of stdout.split(/\r?\n/)) {
+				if (line.startsWith("worktree ")) {
+					if (current.path) worktrees.push(current);
+					current = { path: line.slice(9).trim().replace(/\\/g, "/") };
+				} else if (line.startsWith("HEAD ")) {
+					current.head = line.slice(5).trim();
+				} else if (line.startsWith("branch ")) {
+					current.branch = line.slice(7).trim().replace(/^refs\/heads\//, "");
+				} else if (line.startsWith("bare")) {
+					current.bare = true;
+				} else if (line.length === 0 && current.path) {
+					worktrees.push(current);
+					current = {};
+				}
+			}
+			if (current.path) worktrees.push(current);
+			resolve({ ok: true, worktrees });
+		});
+	});
+}
+
+/** 列出分支。 */
+function gitBranches(root) {
+	return new Promise((resolve) => {
+		execFile("git", ["-C", root, "branch", "--all", "--format=%(refname:short)||%(upstream:short)||%(HEAD)"], {
+			timeout: 8000, maxBuffer: 8 * 1024 * 1024, windowsHide: true
+		}, (error, stdout) => {
+			if (error) return resolve({ ok: false, error: error.message });
+			const branches = [];
+			for (const line of stdout.split(/\r?\n/)) {
+				if (line.length === 0) continue;
+				const parts = line.split("||");
+				branches.push({ name: parts[0] || "", upstream: parts[1] || "", isHead: parts[2] === "*" });
+			}
+			resolve({ ok: true, branches });
+		});
+	});
+}
+
+/** 获取 Git 版本。 */
+function gitVersion() {
+	return new Promise((resolve) => {
+		execFile("git", ["--version"], { timeout: 5000, windowsHide: true }, (error, stdout) => {
+			if (error) return resolve({ ok: false, error: error.message });
+			resolve({ ok: true, version: stdout.trim() });
+		});
+	});
+}
+
+/** 解析 `git status --porcelain=v1 -z` 输出。 */
+function parsePorcelainZ(buf) {
+	const records = [];
+	const parts = buf.split("\0");
+	for (let i = 0; i < parts.length; i++) {
+		const rec = parts[i];
+		if (!rec || rec.length < 3) continue;
+		const x = rec[0];
+		const y = rec[1];
+		const path = rec.slice(3);
+		if ((x === "R" || x === "C") && i + 1 < parts.length && parts[i + 1]) {
+			records.push({ x, y, path, oldPath: parts[i + 1] });
+			i++;
+			continue;
+		}
+		records.push({ x, y, path });
+	}
+	return records;
+}
+
+/** 解析 `git diff --numstat -z` 输出。 */
+function parseNumstatZ(buf) {
+	const map = {};
+	const parts = buf.split("\0");
+	for (let i = 0; i < parts.length; i++) {
+		const rec = parts[i];
+		if (!rec) continue;
+		const fields = rec.split("\t");
+		if (fields.length < 2) continue;
+		const added = fields[0];
+		const deleted = fields[1];
+		let key;
+		if (fields.length >= 3) {
+			key = fields[2];
+		} else {
+			const old = i + 1 < parts.length ? parts[i + 1] : "";
+			const next = i + 2 < parts.length ? parts[i + 2] : "";
+			key = next || old;
+			i += 2;
+		}
+		if (key) map[key] = { added, deleted };
+	}
+	return map;
+}
+
+/** VSCode 式工作区状态：已暂存/未暂存/未跟踪，每文件 +/- 行数。 */
+function gitWorkStatus(root) {
+	return new Promise((resolve) => {
+		Promise.all([
+			new Promise((r) => execFile("git", ["-C", root, "status", "--porcelain=v1", "-z"], { timeout: 8000, maxBuffer: 8 * 1024 * 1024, windowsHide: true }, (e, o) => r(e ? "" : o))),
+			new Promise((r) => execFile("git", ["-C", root, "diff", "--cached", "--numstat", "-z"], { timeout: 8000, maxBuffer: 8 * 1024 * 1024, windowsHide: true }, (e, o) => r(e ? "" : o))),
+			new Promise((r) => execFile("git", ["-C", root, "diff", "--numstat", "-z"], { timeout: 8000, maxBuffer: 8 * 1024 * 1024, windowsHide: true }, (e, o) => r(e ? "" : o))),
+			new Promise((r) => execFile("git", ["-C", root, "rev-parse", "--abbrev-ref", "HEAD"], { timeout: 5000, windowsHide: true }, (e, o) => r(e ? "" : o.trim())))
+		]).then(([statusOut, stagedNum, unstagedNum, branch]) => {
+			if (!statusOut) return resolve({ ok: false, notRepo: true, error: "not a git repository" });
+			const stagedCounts = parseNumstatZ(stagedNum);
+			const unstagedCounts = parseNumstatZ(unstagedNum);
+			const staged = [];
+			const unstaged = [];
+			const untracked = [];
+			const num = (m, path) => {
+				const n = m[path];
+				return n ? { added: n.added === "-" ? null : parseInt(n.added, 10) || 0, deleted: n.deleted === "-" ? null : parseInt(n.deleted, 10) || 0, binary: n.added === "-" } : { added: 0, deleted: 0, binary: false };
+			};
+			for (const r of parsePorcelainZ(statusOut)) {
+				if (r.x === "?" && r.y === "?") { untracked.push({ path: r.path, code: "??" }); continue; }
+				if (r.x !== " " && r.x !== "?") staged.push({ path: r.path, oldPath: r.oldPath || "", code: r.x, ...num(stagedCounts, r.path) });
+				if (r.y !== " " && r.y !== "?") unstaged.push({ path: r.path, oldPath: r.oldPath || "", code: r.y, ...num(unstagedCounts, r.path) });
+			}
+			resolve({ ok: true, branch, staged, unstaged, untracked, counts: { staged: staged.length, unstaged: unstaged.length, untracked: untracked.length } });
+		});
+	});
+}
+
+/** 获取工作区文件 diff（或未跟踪文件内容）。 */
+function gitWorkFile(root, file, mode) {
+	return new Promise((resolve) => {
+		if (mode === "untracked") {
+			const full = join(root, file);
+			stat(full).then((st) => {
+				if (!st.isFile()) return resolve({ ok: true, isDir: true });
+				readFile(full, "utf8").then((content) => {
+					if (content.includes("\0")) return resolve({ ok: true, binary: true });
+					resolve({ ok: true, content: content.slice(0, 240000), truncated: content.length > 240000 });
+				}).catch((e) => resolve({ ok: false, error: e.message }));
+			}).catch(() => resolve({ ok: false, error: "file not found" }));
+			return;
+		}
+		const args = mode === "staged" ? ["-C", root, "diff", "--cached", "--no-color", "--", file] : ["-C", root, "diff", "--no-color", "--", file];
+		execFile("git", args, { timeout: 8000, maxBuffer: 8 * 1024 * 1024, windowsHide: true }, (error, stdout) => {
+			if (error) return resolve({ ok: false, error: error.message });
+			resolve({ ok: true, diff: stdout, truncated: stdout.length > 240000 });
+		});
+	});
+}
+
+/** 获取提交详情。 */
+function gitShowCommit(root, hash) {
+	return new Promise((resolve) => {
+		execFile("git", ["-C", root, "log", "-1", "--format=%H||%P||%an||%ae||%aI||%s||%b", hash], { timeout: 8000, maxBuffer: 8 * 1024 * 1024, windowsHide: true }, (error, stdout) => {
+			if (error) return resolve({ ok: false, error: error.message });
+			const parts = stdout.trim().split("||");
+			const sha = parts[0] || hash;
+			const parents = (parts[1] || "").trim();
+			resolve({ ok: true, hash: sha, parents: parents ? parents.split(" ") : [], author: parts[2] || "", email: parts[3] || "", date: parts[4] || "", subject: parts[5] || "", body: parts.slice(6).join("||").trim() });
+		});
+	});
+}
+
+/** 获取提交 diff（完整 patch）。 */
+function gitCommitDiff(root, hash) {
+	return new Promise((resolve) => {
+		execFile("git", ["-C", root, "show", "--no-color", "--format=", hash], { timeout: 8000, maxBuffer: 8 * 1024 * 1024, windowsHide: true }, (error, stdout) => {
+			if (error) return resolve({ ok: false, error: error.message });
+			resolve({ ok: true, diff: stdout, truncated: stdout.length > 240000 });
+		});
+	});
+}
+
+/** 获取文件历史。 */
+function gitFileLog(root, file) {
+	return new Promise((resolve) => {
+		execFile("git", ["-C", root, "log", "--follow", "--topo-order", "--date=iso-strict", "--format=%H|%ai|%an|%s", "--", file], { timeout: 8000, maxBuffer: 8 * 1024 * 1024, windowsHide: true }, (error, stdout) => {
+			if (error) return resolve({ ok: false, error: error.message });
+			const commits = [];
+			for (const line of stdout.split(/\r?\n/)) {
+				if (line.length === 0) continue;
+				const parts = line.split("|");
+				commits.push({ hash: parts[0] || "", date: parts[1] || "", author: parts[2] || "", message: parts.slice(3).join("|") || "" });
+			}
+			resolve({ ok: true, commits });
+		});
+	});
+}
+
+/** 智能提交信息建议（基于 diff 自动生成）。 */
+function gitSuggestMsg(root) {
+	return new Promise((resolve) => {
+		Promise.all([
+			new Promise((r) => execFile("git", ["-C", root, "diff", "--cached", "--numstat", "-z"], { timeout: 8000, maxBuffer: 8 * 1024 * 1024, windowsHide: true }, (e, o) => r(e ? "" : o))),
+			new Promise((r) => execFile("git", ["-C", root, "diff", "--numstat", "-z"], { timeout: 8000, maxBuffer: 8 * 1024 * 1024, windowsHide: true }, (e, o) => r(e ? "" : o))),
+			new Promise((r) => execFile("git", ["-C", root, "status", "--porcelain=v1", "-z"], { timeout: 8000, maxBuffer: 8 * 1024 * 1024, windowsHide: true }, (e, o) => r(e ? "" : o)))
+		]).then(([stagedNum, unstagedNum, statusOut]) => {
+			if (!statusOut) return resolve({ ok: false, error: "not a git repository" });
+			const stagedCounts = parseNumstatZ(stagedNum);
+			const unstagedCounts = parseNumstatZ(unstagedNum);
+			const untracked = [];
+			const staged = [];
+			const unstaged = [];
+			for (const r of parsePorcelainZ(statusOut)) {
+				if (r.x === "?" && r.y === "?") { untracked.push(r.path); continue; }
+				if (r.x !== " " && r.x !== "?") staged.push(r.path);
+				if (r.y !== " " && r.y !== "?") unstaged.push(r.path);
+			}
+			const files = [...staged, ...unstaged, ...untracked];
+			let ins = 0, del = 0;
+			for (const m of [stagedCounts, unstagedCounts]) {
+				for (const path of Object.keys(m)) {
+					const v = m[path];
+					ins += v.added === "-" ? 0 : parseInt(v.added, 10) || 0;
+					del += v.deleted === "-" ? 0 : parseInt(v.deleted, 10) || 0;
+				}
+			}
+			const name = (p) => p.split("/").pop();
+			const uniq = [...new Set(files)];
+			const candidates = [];
+			if (untracked.length && !staged.length && !unstaged.length) {
+				candidates.push("feat: 新增 " + uniq.map(name).slice(0, 3).join("、") + (uniq.length > 3 ? " 等" : ""));
+			} else if (del >= ins && del > 0) {
+				candidates.push("fix: 移除/精简 " + uniq.map(name).slice(0, 3).join("、") + (uniq.length > 3 ? " 等" : ""));
+			} else if (uniq.length) {
+				candidates.push("feat: 更新 " + uniq.map(name).slice(0, 3).join("、") + (uniq.length > 3 ? " 等" : ""));
+			}
+			if (uniq.length) {
+				candidates.push("chore: 调整 " + uniq.map(name).slice(0, 5).join("、") + (uniq.length > 5 ? " 等 " + uniq.length + " 个文件" : "") + "（+" + ins + " -" + del + "）");
+			}
+			if (!uniq.length) candidates.push("chore: 清理/整理");
+			resolve({ ok: true, candidates: candidates.slice(0, 3), summary: { staged: staged.length, unstaged: unstaged.length, untracked: untracked.length, insertions: ins, deletions: del }, files: uniq });
+		});
+	});
+}
+
+/** 拉取远程变更。 */
+function gitFetch(root) {
+	return new Promise((resolve) => {
+		execFile("git", ["-C", root, "fetch", "--all", "--prune"], { timeout: 120000, maxBuffer: 8 * 1024 * 1024, windowsHide: true }, (error, stdout) => {
+			if (error) return resolve({ ok: false, error: error.message });
+			resolve({ ok: true, output: stdout.trim() });
+		});
+	});
+}
+
+/** 推送到远程。 */
+function gitPush(root, branch) {
+	return new Promise((resolve) => {
+		execFile("git", ["-C", root, "push", "origin", branch || "HEAD"], { timeout: 120000, maxBuffer: 8 * 1024 * 1024, windowsHide: true }, (error, stdout) => {
+			if (error) return resolve({ ok: false, error: error.message });
+			resolve({ ok: true, output: stdout.trim() });
+		});
+	});
+}
+
+/** 切换分支。 */
+function gitCheckout(root, branch) {
+	return new Promise((resolve) => {
+		execFile("git", ["-C", root, "checkout", branch], { timeout: 30000, windowsHide: true }, (error) => {
+			if (error) return resolve({ ok: false, error: error.message });
+			resolve({ ok: true });
+		});
+	});
+}
+
+function gitExec(root, args) {
+	return new Promise((resolve) => {
+		execFile("git", ["-C", root, ...args], { timeout: 30000, maxBuffer: 8 * 1024 * 1024, windowsHide: true }, (error, stdout) => {
+			if (error) return resolve({ ok: false, error: error.message });
+			resolve({ ok: true, output: stdout.trim() });
+		});
+	});
+}
+
 /** 递归搜索文件名（跳过隐藏目录，带深度/条目/结果上限）。 */
 async function searchDir(root, q) {
 	const needle = q.toLowerCase();
@@ -301,7 +755,8 @@ function mcpPublicView(server) {
 		args: server.args,
 		url: server.url,
 		enabled: server.enabled !== false,
-		hasEnv: !!(server.env && Object.keys(server.env).length > 0)
+		hasEnv: !!(server.env && Object.keys(server.env).length > 0),
+		desc: server.desc ?? ""
 	};
 }
 
@@ -491,7 +946,7 @@ function apply(ctx) {
 			}
 			if (url.pathname === "/vscode-files/skills/toggle" || url.pathname === "/vscode-files/skills/delete"
 				|| url.pathname === "/vscode-files/mcp/toggle" || url.pathname === "/vscode-files/mcp/delete"
-				|| url.pathname === "/vscode-files/mcp/add") {
+				|| url.pathname === "/vscode-files/mcp/add" || url.pathname === "/vscode-files/mcp/edit") {
 				if (req.method !== "POST") return sendJson(res, 405, { ok: false, error: "method not allowed" });
 				try {
 					const body = await readJsonBody(req, 64 * 1024);
@@ -544,7 +999,8 @@ function apply(ctx) {
 							env: body?.env && typeof body.env === "object" ? Object.fromEntries(Object.entries(body.env).map(([k, v]) => [k, String(v)])) : {},
 							url: body?.url ?? "",
 							headers: body?.headers && typeof body.headers === "object" ? Object.fromEntries(Object.entries(body.headers).map(([k, v]) => [k, String(v)])) : {},
-							enabled: true
+							enabled: true,
+							desc: body?.desc ?? "",
 						};
 						mcpServers.push(server);
 						await mountMCPServer(server);
@@ -594,7 +1050,101 @@ function apply(ctx) {
 					if (looksBinary(text)) return sendJson(res, 200, { ok: true, kind: "binary", content: "", size: info.size });
 					return sendJson(res, 200, { ok: true, kind: "text", content: text, size: info.size });
 				}
-				if (url.pathname === "/vscode-files/git") {
+				if (url.pathname === "/vscode-files/git/version") {
+				return sendJson(res, 200, await gitVersion());
+			}
+			if (url.pathname === "/vscode-files/git") {
+					if (req.method === "POST") {
+						let body;
+						try {
+							body = await readJsonBody(req, 64 * 1024);
+						} catch (error) {
+							return sendJson(res, 400, { ok: false, error: error.message });
+						}
+						const sub = body?.action;
+						if (sub === "diff") {
+							const file = body?.file;
+							if (typeof file !== "string" || file.length === 0) return sendJson(res, 400, { ok: false, error: "body needs { action:'diff', file }" });
+							return sendJson(res, 200, await gitDiffOf(target, file, body?.staged === true));
+						}
+						if (sub === "log") {
+							return sendJson(res, 200, await gitLogOf(target, body?.max || 50));
+						}
+						if (sub === "graph") {
+							return sendJson(res, 200, await gitGraphData(target, body?.max || 50));
+						}
+						if (sub === "add" || sub === "stage") {
+							const files = Array.isArray(body?.files) ? body.files : (typeof body?.file === "string" ? [body.file] : []);
+							if (files.length === 0) return sendJson(res, 400, { ok: false, error: "body needs { files: string[] }" });
+							return sendJson(res, 200, await gitStageFiles(target, files));
+						}
+						if (sub === "unstage") {
+							const files = Array.isArray(body?.files) ? body.files : (typeof body?.file === "string" ? [body.file] : []);
+							if (files.length === 0) return sendJson(res, 400, { ok: false, error: "body needs { files: string[] }" });
+							return sendJson(res, 200, await gitUnstageFiles(target, files));
+						}
+						if (sub === "commit") {
+							const msg = body?.message;
+							if (typeof msg !== "string" || msg.trim().length === 0) return sendJson(res, 400, { ok: false, error: "body needs { message: string }" });
+							return sendJson(res, 200, await gitCommit(target, msg.trim()));
+						}
+						if (sub === "restore") {
+							const files = Array.isArray(body?.files) ? body.files : (typeof body?.file === "string" ? [body.file] : []);
+							if (files.length === 0) return sendJson(res, 400, { ok: false, error: "body needs { files: string[] }" });
+							return sendJson(res, 200, await gitRestoreFile(target, files));
+						}
+						if (sub === "repos") {
+							const repos = await gitDiscoverRepos(target);
+							return sendJson(res, 200, { ok: true, repos });
+						}
+						if (sub === "worktrees") {
+							return sendJson(res, 200, await gitWorktrees(target));
+						}
+						if (sub === "branches") {
+							return sendJson(res, 200, await gitBranches(target));
+						}
+						if (sub === "workstatus") {
+							return sendJson(res, 200, await gitWorkStatus(target));
+						}
+						if (sub === "workfile") {
+							const file = body?.file;
+							if (typeof file !== "string" || file.length === 0) return sendJson(res, 400, { ok: false, error: "body needs { file }" });
+							return sendJson(res, 200, await gitWorkFile(target, file, body?.mode || "unstaged"));
+						}
+						if (sub === "show") {
+							const hash = body?.hash;
+							if (typeof hash !== "string" || hash.length === 0) return sendJson(res, 400, { ok: false, error: "body needs { hash }" });
+							return sendJson(res, 200, await gitShowCommit(target, hash));
+						}
+						if (sub === "commit-diff") {
+							const hash = body?.hash;
+							if (typeof hash !== "string" || hash.length === 0) return sendJson(res, 400, { ok: false, error: "body needs { hash }" });
+							return sendJson(res, 200, await gitCommitDiff(target, hash));
+						}
+						if (sub === "filelog") {
+							const file = body?.file;
+							if (typeof file !== "string" || file.length === 0) return sendJson(res, 400, { ok: false, error: "body needs { file }" });
+							return sendJson(res, 200, await gitFileLog(target, file));
+						}
+						if (sub === "suggestmsg") {
+							return sendJson(res, 200, await gitSuggestMsg(target));
+						}
+						if (sub === "fetch") {
+							return sendJson(res, 200, await gitFetch(target));
+						}
+						if (sub === "push") {
+							return sendJson(res, 200, await gitPush(target, body?.branch));
+						}
+						if (sub === "stage-all") {
+							return sendJson(res, 200, await gitExec(target, ["add", "-A"]));
+						}
+						if (sub === "checkout") {
+							const branch = body?.branch;
+							if (typeof branch !== "string" || branch.length === 0) return sendJson(res, 400, { ok: false, error: "body needs { branch }" });
+							return sendJson(res, 200, await gitCheckout(target, branch));
+						}
+						return sendJson(res, 400, { ok: false, error: "unknown git action: " + sub });
+					}
 					return sendJson(res, 200, await gitStatusOf(target));
 				}
 				if (url.pathname === "/vscode-files/search") {

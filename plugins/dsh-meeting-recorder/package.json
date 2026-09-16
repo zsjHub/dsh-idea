@@ -1,0 +1,50 @@
+{
+  "name": "dsh-meeting-recorder",
+  "version": "0.1.0",
+  "description": "DSH 会议纪要录音插件：浏览器内置 Web Speech API 实时语音转写 + 结构化会议纪要，支持讨论要点/决定事项/待办事项的记录与导出",
+  "type": "module",
+  "main": "lib/index.js",
+  "exports": {
+    ".": "./lib/index.js",
+    "./client": "./lib/client.js",
+    "./package.json": "./package.json"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "dsh": {
+    "client": {
+      "inject": [],
+      "platform": "web"
+    },
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "files": [
+    "lib/**/*.js",
+    "cordis.patch.yml",
+    "README.md",
+    "LICENSE"
+  ],
+  "license": "MIT",
+  "keywords": [
+    "dsh",
+    "deepseek-harness",
+    "meeting",
+    "minutes",
+    "voice",
+    "speech-to-text",
+    "microphone",
+    "webspeech",
+    "client-plugin"
+  ],
+  "peerDependencies": {
+    "react": ">=18.2.0"
+  },
+  "peerDependenciesMeta": {
+    "react": {
+      "optional": true
+    }
+  }
+}

@@ -1,0 +1,5 @@
+# dsh-meeting-recorder bundle patch —— 挂载进 profile 插件树。
+- insert:
+    - id: dsh-meeting-recorder
+      name: dsh-meeting-recorder
+      config: {}

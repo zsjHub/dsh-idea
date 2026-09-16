@@ -59,6 +59,7 @@ window.__ModuleLoader__.load({
 			str: "vk_tokStr",
 			kw: "vk_tokKw",
 			num: "vk_tokNum",
+			anno: "vk_tokAnno",
 			tag: "vk_tokTag",
 			attr: "vk_tokAttr",
 			md: "vk_tokMd"
@@ -72,6 +73,7 @@ window.__ModuleLoader__.load({
 			if (["json", "jsonc"].includes(ext)) return "json";
 			if (["yml", "yaml"].includes(ext)) return "yaml";
 			if (["md", "markdown"].includes(ext)) return "md";
+			if (["java", "class", "jar"].includes(ext)) return "java";
 			return "plain";
 		}
 		function tokenize(code, family) {
@@ -83,7 +85,8 @@ window.__ModuleLoader__.load({
 				css: /(\/\*[\s\S]*?\*\/)|("(?:[^"\\\n]|\\.)*"|'(?:[^'\\\n]|\\.)*')|#[0-9a-fA-F]{3,8}\b|\b\d+(?:\.\d+)?(?:px|em|rem|%|vh|vw|s|ms|deg|fr)?\b/g,
 				json: /("(?:[^"\\\n]|\\.)*")(\s*:)?|\b(?:true|false|null)\b|\b-?\d+(?:\.\d+)?(?:e[+-]?\d+)?\b/g,
 				yaml: /(#[^\n]*)|("(?:[^"\\\n]|\\.)*"|'(?:[^'\\\n]|\\.)*')|^\s*(- |[a-zA-Z0-9_.-]+:)|(true|false|null)|(-?\d+(?:\.\d+)?)/gm,
-				md: /(^#{1,6}[^\n]*$)|(\*\*[^*\n]+\*\*|`[^`\n]+`)|(^[-*+]\s.*$)|(^>.*$)/gm
+				md: /(^#{1,6}[^\n]*$)|(\*\*[^*\n]+\*\*|`[^`\n]+`)|(^[-*+]\s.*$)|(^>.*$)/gm,
+				java: /(\/\/[^\n]*|\/\*[\s\S]*?\*\/)|("(?:[^"\\\n]|\\.)*")|(\b(?:abstract|assert|boolean|break|byte|case|catch|char|class|const|continue|default|do|double|else|enum|extends|final|finally|float|for|if|implements|import|instanceof|int|interface|long|module|native|new|package|private|protected|public|record|return|requires|short|static|strictfp|super|switch|synchronized|this|throw|throws|transient|try|var|void|volatile|while|yield|null|true|false|sealed|permits|transitive|exports|opens|provides|uses|to|with|open|when)\b)|(@[A-Za-z_$][A-Za-z0-9_$.]*\b)|(\b\d+(?:\.\d+)?(?:[fLdD])?\b)/g
 			}[family];
 			const out = [];
 			let last = 0;
@@ -99,6 +102,7 @@ window.__ModuleLoader__.load({
 				else if (family === "css") cls = m[1] ? TOKEN_CLASS.com : m[2] ? TOKEN_CLASS.str : m[3] ? TOKEN_CLASS.num : m[4] ? TOKEN_CLASS.num : null;
 				else if (family === "json") cls = m[1] ? TOKEN_CLASS.str : m[3] ? TOKEN_CLASS.kw : m[4] ? TOKEN_CLASS.num : null;
 				else if (family === "yaml") cls = m[1] ? TOKEN_CLASS.com : m[2] ? TOKEN_CLASS.str : m[3] ? TOKEN_CLASS.attr : m[4] ? TOKEN_CLASS.kw : m[5] ? TOKEN_CLASS.num : null;
+				else if (family === "java") cls = m[1] ? TOKEN_CLASS.com : m[2] ? TOKEN_CLASS.str : m[3] ? TOKEN_CLASS.kw : m[4] ? TOKEN_CLASS.anno : m[5] ? TOKEN_CLASS.num : null;
 				else cls = TOKEN_CLASS.md;
 				out.push([cls, full]);
 				last = m.index + full.length;
@@ -128,7 +132,7 @@ window.__ModuleLoader__.load({
 			toml: ["⚙", "Conf"], ini: ["⚙", "Conf"], cfg: ["⚙", "Conf"], conf: ["⚙", "Conf"], env: ["⚙", "Conf"], properties: ["⚙", "Conf"],
 			txt: ["≡", "Txt"], log: ["≡", "Txt"],
 			sql: ["DB", "Sql"], graphql: ["◈", "Gql"], gql: ["◈", "Gql"],
-			rs: ["Rs", "Rs"], go: ["Go", "Go"], java: ["☕", "Emoji"],
+			rs: ["Rs", "Rs"], go: ["Go", "Go"], java: ["Ja", "Java"],
 			c: ["C", "C"], h: ["C", "C"],
 			cpp: ["C+", "Cpp"], cc: ["C+", "Cpp"], cxx: ["C+", "Cpp"], hpp: ["C+", "Cpp"], cs: ["C#", "Cs"],
 			rb: ["Rb", "Rb"], php: ["Φ", "Php"], kt: ["K", "Kt"], kts: ["K", "Kt"], swift: ["Sw", "Swift"],
@@ -280,6 +284,7 @@ window.__ModuleLoader__.load({
 			".vk_iGql{color:#e535ab;background:rgba(229,53,171,.12)}",
 			".vk_iRs{color:#b4713d;background:rgba(222,165,132,.22)}",
 			".vk_iGo{color:#00add8;background:rgba(0,173,216,.12)}",
+			".vk_iJava{color:#b07219;background:rgba(176,114,25,.14)}",
 			".vk_iC{color:#5c6bc0;background:rgba(92,107,192,.14)}",
 			".vk_iCpp{color:#d1477b;background:rgba(243,75,125,.12)}",
 			".vk_iCs{color:#2c8c1e;background:rgba(35,145,32,.12)}",
@@ -336,8 +341,9 @@ window.__ModuleLoader__.load({
 			".vk_tokKw{color:#ff7b72}",
 			".vk_tokNum{color:#79c0ff}",
 			".vk_tokTag{color:#7ee787}",
-			".vk_tokAttr{color:#79c0ff}",
+			".vk_tokAttr{color:#d2a8ff}",
 			".vk_tokMd{color:#ffa657}",
+			".vk_tokAnno{color:#d2a8ff}",
 			// ── 编辑模式：工具条 / 按钮 / 输入区 ────────────────────────
 			".vk_editBar{display:flex;align-items:center;gap:8px;flex:none;padding:6px 10px;border-bottom:1px solid var(--dsw-alias-border-l1);background:var(--dsw-alias-bg-base)}",
 			".vk_editBtn{appearance:none;cursor:pointer;border:1px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-base);color:var(--dsw-alias-label-primary);border-radius:6px;font-size:12px;padding:4px 12px;font-family:inherit;transition:background-color .12s,border-color .12s,filter .12s,opacity .12s}",
@@ -386,10 +392,7 @@ window.__ModuleLoader__.load({
 			"body[data-ds-dark-theme] .vk_iR{color:#6aa5e0}",
 			"body[data-ds-dark-theme] .vk_iBin{color:#9aa7b0}",
 			"body[data-ds-dark-theme] .vk_iGit{color:#f05033}",
-			"body[data-ds-dark-theme] .vk_gitM{color:#e2c08d}",
-			"body[data-ds-dark-theme] .vk_gitU,body[data-ds-dark-theme] .vk_gitA{color:#73c991}",
-			"body[data-ds-dark-theme] .vk_gitD{color:#f14c4c}",
-			"body[data-ds-dark-theme] .vk_gitR{color:#c678dd}",
+			"body[data-ds-dark-theme] .vk_iJava{color:#d4a859;background:rgba(212,168,89,.14)}",
 			// 设置面板 · 全局人设分区
 			".vk_personaSection{display:flex;flex-direction:column;gap:10px;padding:16px;width:100%;box-sizing:border-box}",
 			".vk_personaDesc{font-size:12px;color:var(--dsw-alias-label-secondary);line-height:1.7}",
@@ -407,7 +410,7 @@ window.__ModuleLoader__.load({
 			".vk_mgrRow{display:flex;align-items:center;gap:10px;border:1px solid var(--dsw-alias-border-l1);border-radius:8px;padding:8px 12px;background:var(--dsw-specific-input-fill,var(--dsw-specific-sidebar-fill))}",
 			".vk_mgrInfo{flex:1;min-width:0}",
 			".vk_mgrName{font-size:13px;font-weight:600;color:var(--dsw-alias-label-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}",
-			".vk_mgrMeta{font-size:11.5px;color:var(--dsw-alias-label-secondary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}",
+			".vk_mgrMeta{font-size:11.5px;color:var(--dsw-alias-label-secondary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}.vk_mgrDesc{font-size:11px;color:var(--dsw-alias-label-tertiary,var(--dsw-alias-label-secondary));white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:3px}",
 			".vk_mgrBadge{flex:none;font-size:11px;border-radius:999px;padding:2px 9px;font-weight:600}",
 			".vk_mgrBadgeOn{color:#73c991;background:rgba(115,201,145,.14)}",
 			".vk_mgrBadgeOff{color:var(--dsw-alias-label-secondary);background:var(--dsw-alias-interactive-bg-hover)}",
@@ -423,7 +426,73 @@ window.__ModuleLoader__.load({
 			".vk_mgrAddForm{display:flex;flex-direction:column;gap:8px;border:1px dashed var(--dsw-alias-border-l2);border-radius:8px;padding:12px;margin-bottom:10px}",
 			".vk_mgrInput{background:var(--dsw-specific-input-fill,var(--dsw-specific-sidebar-fill));color:var(--dsw-alias-label-primary);border:1px solid var(--dsw-alias-border-l1);border-radius:6px;padding:6px 10px;font-size:12.5px;font-family:inherit}",
 			".vk_mgrInput:focus{outline:none;border-color:var(--vk-accent)}",
-			".vk_mgrLabel{font-size:11.5px;color:var(--dsw-alias-label-secondary)}"
+			".vk_mgrLabel{font-size:11.5px;color:var(--dsw-alias-label-secondary)}",
+			// Git 面板样式（dsh-git-graph 风格）
+			".vk_gitPanel{display:flex;flex-direction:column;height:100%;overflow:hidden}",
+			".vk_gitToolbar{display:flex;align-items:center;gap:6px;padding:6px 8px;border-bottom:1px solid var(--dsw-alias-border-l1);flex:none}",
+			".vk_gitRepoSelect{flex:1;min-width:0;background:var(--dsw-specific-input-fill,var(--dsw-specific-sidebar-fill));color:var(--dsw-alias-label-primary);border:1px solid var(--dsw-alias-border-l1);border-radius:6px;padding:4px 8px;font-size:12px;font-family:inherit;cursor:pointer}",
+			".vk_gitToolBtn{appearance:none;border:1px solid var(--dsw-alias-border-l1);background:var(--dsw-specific-sidebar-fill);color:var(--dsw-alias-label-secondary);border-radius:6px;padding:4px 8px;cursor:pointer;font-size:11px;font-family:inherit;transition:background-color .12s,color .12s}",
+			".vk_gitToolBtn:hover{color:var(--dsw-alias-label-primary);border-color:var(--dsw-alias-border-l2);background:var(--dsw-alias-interactive-bg-hover)}",
+			".vk_gitToolBtn:disabled{opacity:.45;cursor:not-allowed}",
+			".vk_gitToolBtnPrimary{background:var(--vk-accent);color:#fff;border-color:transparent;font-weight:600}",
+			".vk_gitToolBtnPrimary:hover{filter:brightness(1.1);color:#fff}",
+			// 变更区（VSCode 风格，dsh-git-graph 样式）
+			".vk_gitSection{padding:4px 0;border-bottom:1px solid var(--dsw-alias-border-l1)}",
+			".vk_gitSectionTitle{font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:.3px;color:var(--dsw-alias-label-secondary);padding:6px 10px 2px;margin:0}",
+			".vk_gitChangeItem{display:flex;align-items:center;gap:8px;padding:3px 10px;font-size:12px;cursor:pointer;transition:background-color .1s;border-radius:6px;margin:0 4px}",
+			".vk_gitChangeItem:hover{background:var(--dsw-alias-interactive-bg-hover)}",
+			// 状态徽标（dsh-git-graph wd-badge 风格）
+			".vk_gitChangeStatus{flex:none;width:20px;height:20px;display:inline-flex;align-items:center;justify-content:center;font-size:10.5px;font-weight:800;font-family:Consolas,monospace;border-radius:5px}",
+			".vk_gitM{background:rgba(240,136,62,.16);color:#f0883e}",
+			".vk_gitA{background:rgba(63,185,80,.18);color:#3fb950}",
+			".vk_gitD{background:rgba(248,81,73,.16);color:#f85149}",
+			".vk_gitR{background:rgba(188,140,255,.16);color:#bc8cff}",
+			".vk_gitU{background:rgba(210,153,34,.16);color:#d29922}",
+			".vk_gitQ{background:rgba(154,167,180,.16);color:#9aa7b4}",
+			".vk_gitChangeName{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--dsw-alias-label-primary);font-family:Consolas,monospace;font-size:12px}",
+			".vk_gitChangeAction{appearance:none;border:none;background:none;cursor:pointer;font-size:11px;padding:2px 5px;border-radius:4px;color:var(--dsw-alias-label-secondary)}",
+			".vk_gitChangeAction:hover{color:var(--dsw-alias-label-primary);background:var(--dsw-alias-interactive-bg-hover)}",
+			".vk_gitChangeActionDanger:hover{color:#f85149 !important;background:rgba(248,81,73,.1) !important}",
+			".vk_gitCnt{flex:none;font-size:10px;font-family:Consolas,monospace;color:var(--dsw-alias-label-tertiary);margin-left:4px;white-space:nowrap}",
+			".vk_gitInlineDiff{font-size:11px;font-family:ui-monospace,'Cascadia Mono',Consolas,'Courier New',monospace;padding:4px 10px 4px 28px;border-bottom:1px solid var(--dsw-alias-border-l1);max-height:200px;overflow:auto;white-space:pre;line-height:16px;color:var(--dsw-alias-label-secondary)}",
+			// 提交表单
+			".vk_gitCommitForm{padding:8px;border-bottom:1px solid var(--dsw-alias-border-l1);display:flex;flex-direction:column;gap:6px}",
+			".vk_gitCommitInput{box-sizing:border-box;width:100%;background:var(--dsw-specific-input-fill,var(--dsw-specific-sidebar-fill));color:var(--dsw-alias-label-primary);border:1px solid var(--dsw-alias-border-l1);border-radius:6px;padding:6px 10px;font-size:12px;font-family:inherit;resize:none;min-height:52px}",
+			".vk_gitCommitInput:focus{outline:none;border-color:var(--vk-accent)}",
+			".vk_gitCommitRow{display:flex;align-items:center;gap:6px;justify-content:flex-end}",
+			".vk_gitCommitBtn{background:var(--vk-accent);color:#fff;border:none;border-radius:6px;padding:5px 14px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit}",
+			".vk_gitCommitBtn:hover{filter:brightness(1.1)}",
+			".vk_gitCommitBtn:disabled{opacity:.5;cursor:default}",
+			".vk_gitEmpty{padding:20px;text-align:center;font-size:12px;color:var(--dsw-alias-label-tertiary);white-space:pre-wrap}",
+			// Diff 查看器（dsh-git-graph df-* 风格）
+			".vk_gitDiffView{flex:1;min-height:0;overflow:auto;font-family:ui-monospace,'Cascadia Mono',Consolas,'Courier New',monospace;font-size:11.5px;line-height:1.6;padding:0}",
+			".vk_gitDiffFile{font-size:12px;font-weight:700;padding:6px 12px;color:var(--dsw-alias-label-primary);background:var(--dsw-specific-sidebar-fill);border-bottom:1px solid var(--dsw-alias-border-l1);position:sticky;top:0;z-index:1}",
+			".vk_gitDiffHunk{color:var(--dsw-alias-label-secondary);padding:2px 12px;font-size:11px;background:rgba(88,166,255,.08)}",
+			".vk_gitDiffLine{display:flex;padding:0 12px;white-space:pre}",
+			".vk_gitDiffSign{width:20px;flex:none;text-align:center;user-select:none}",
+			".vk_gitDiffAdd{background:rgba(63,185,80,.14)}",
+			".vk_gitDiffAdd .vk_gitDiffSign{color:#3fb950}",
+			".vk_gitDiffDel{background:rgba(248,81,73,.14)}",
+			".vk_gitDiffDel .vk_gitDiffSign{color:#f85149}",
+			// 历史视图 + 图谱
+			".vk_gitHistoryItem{padding:0;border-bottom:1px solid var(--dsw-alias-border-l1);cursor:pointer;transition:background-color .1s}",
+			".vk_gitHistoryItem:hover{background:var(--dsw-alias-interactive-bg-hover)}",
+			".vk_gitGraphMsg{font-size:12.5px;font-weight:600;color:var(--dsw-alias-label-primary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}",
+			".vk_gitGraphMeta{font-size:10.5px;color:var(--dsw-alias-label-tertiary);margin-top:1px}",
+			// 分支/标签标签（dsh-git-graph cl-ref 风格）
+			".vk_gitRefTag{font-size:9.5px;font-weight:700;padding:0 6px;border-radius:99px;white-space:nowrap;line-height:18px;flex:none}",
+			".vk_gitRefTagBranch{color:#58a6ff;border:1px solid rgba(88,166,255,.35);background:rgba(88,166,255,.1)}",
+			".vk_gitRefTagHead{color:#3fb950;border:1px solid rgba(63,185,80,.4);background:rgba(63,185,80,.12)}",
+			".vk_gitRefTagTag{color:#d29922;border:1px solid rgba(210,153,34,.4);background:rgba(210,153,34,.1)}",
+			// 管理面板改进：卡片式布局
+			".vk_settingsCard{display:flex;flex-direction:column;gap:8px;padding:12px;border:1px solid var(--dsw-alias-border-l1);border-radius:10px;background:var(--dsw-specific-input-fill,var(--dsw-specific-sidebar-fill))}",
+			".vk_settingsCardRow{display:flex;align-items:center;gap:10px}",
+			".vk_settingsCardLabel{flex:1;min-width:0;font-size:12px;color:var(--dsw-alias-label-primary)}",
+			".vk_settingsCardDesc{font-size:11px;color:var(--dsw-alias-label-secondary);line-height:1.6}",
+			".vk_settingsToggle{position:relative;width:36px;height:20px;flex:none;background:var(--dsw-alias-border-l2);border-radius:10px;cursor:pointer;transition:background-color .15s}",
+			".vk_settingsToggleOn{background:var(--vk-accent)}",
+			".vk_settingsToggle::after{content:'';position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:#fff;transition:transform .15s}",
+			".vk_settingsToggleOn::after{transform:translateX(16px)}"
 		].join("");
 		{
 			const tagId = "@anoslide/dsh-client-idea/vscode.module.css";
@@ -448,7 +517,7 @@ window.__ModuleLoader__.load({
 						return {
 							tabs: d.tabs.filter((t) => t && typeof t.path === "string" && typeof t.name === "string").slice(-20),
 							active: typeof d.active === "string" ? d.active : null,
-							sidebarTab: d.sidebarTab === "sessions" ? "sessions" : "files",
+							sidebarTab: d.sidebarTab === "sessions" ? "sessions" : d.sidebarTab === "git" ? "git" : "files",
 							root: typeof d.root === "string" && d.root.length > 0 ? d.root : null,
 							roots: d.roots && typeof d.roots === "object" && !Array.isArray(d.roots) ? d.roots : {},
 							mode: d.mode === "native" ? "native" : "ide"
@@ -865,7 +934,20 @@ window.__ModuleLoader__.load({
 					h("button", { className: "vk_menuItem", onClick: () => contextCreate("dir") }, "新建文件夹"),
 					h("div", { className: "vk_menuSep" }),
 					h("button", { className: "vk_menuItem", onClick: () => { copyToClipboard(ctxMenu.path); setCtxMenu(null); } }, "复制绝对路径"),
-					h("button", { className: "vk_menuItem", onClick: () => { const r = ctxMenu.path !== null && typeof root === "string" ? (ctxMenu.path.startsWith(root + "\\") || ctxMenu.path.startsWith(root + "/") ? ctxMenu.path.slice(root.length + 1).replace(/\\/g, "/") : ctxMenu.path) : ctxMenu.path; copyToClipboard(r); setCtxMenu(null); } }, "复制相对路径")
+					h("button", { className: "vk_menuItem", onClick: () => { const r = ctxMenu.path !== null && typeof root === "string" ? (ctxMenu.path.startsWith(root + "\\") || ctxMenu.path.startsWith(root + "/") ? ctxMenu.path.slice(root.length + 1).replace(/\\/g, "/") : ctxMenu.path) : ctxMenu.path; copyToClipboard(r); setCtxMenu(null); } }, "复制相对路径"),
+					// Git 操作（仅对非目录显示）
+					ctxMenu !== null && !ctxMenu.isDir ? (() => {
+						const relPath = ctxMenu.path !== null && typeof root === "string" ? (ctxMenu.path.startsWith(root + "\\") || ctxMenu.path.startsWith(root + "/") ? ctxMenu.path.slice(root.length + 1).replace(/\\/g, "/") : null) : null;
+						const code = relPath !== null && git !== null ? git[relPath] : null;
+						const isStaged = code !== null && code !== "??" && code[0] !== " ";
+						const isUnstaged = code !== null && ((code.length > 1 && code[1] !== " ") || code === "??");
+						return h("div", { style: { display: "contents" } },
+							h("div", { className: "vk_menuSep" }),
+							isStaged ? h("button", { className: "vk_menuItem", onClick: () => { const p = ctxMenu.path; const rp = rel(p); fetch("/vscode-files/git?path=" + encodeURIComponent(root), { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ action: "unstage", files: [rp] }) }).then((r) => r.json()).then((d) => { if (d && d.ok) refreshGit(); }); setCtxMenu(null); } }, "取消暂存") : null,
+							isUnstaged ? h("button", { className: "vk_menuItem", onClick: () => { const p = ctxMenu.path; const rp = rel(p); fetch("/vscode-files/git?path=" + encodeURIComponent(root), { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ action: "add", files: [rp] }) }).then((r) => r.json()).then((d) => { if (d && d.ok) refreshGit(); }); setCtxMenu(null); } }, "暂存到暂存区") : null,
+							isUnstaged ? h("button", { className: "vk_menuItem vk_menuItemDanger", onClick: () => { const p = ctxMenu.path; const rp = rel(p); if (typeof confirm === "function" && !confirm("确定还原「" + ctxMenu.name + "」？")) return; fetch("/vscode-files/git?path=" + encodeURIComponent(root), { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ action: "restore", files: [rp] }) }).then((r) => r.json()).then((d) => { if (d && d.ok) refreshGit(); }); setCtxMenu(null); } }, "还原文件") : null
+						);
+					})() : null
 				) : null
 			);
 		}
@@ -1251,115 +1333,616 @@ window.__ModuleLoader__.load({
 		// 组件：MCP 管理分区（~/.dsh/mcp-servers.json，开关/删除/添加）
 		// ──────────────────────────────────────────────────────────────
 		function MCPSection() {
-			const [servers, setServers] = react.useState(null);
-			const [busy, setBusy] = react.useState(false);
-			const [err, setErr] = react.useState(null);
-			const [showAdd, setShowAdd] = react.useState(false);
-			const [form, setForm] = react.useState({ serverName: "", transport: "stdio", command: "", args: "", url: "", env: "{}" });
-			const refresh = react.useCallback(() => {
+				const [servers, setServers] = react.useState(null);
+				const [busy, setBusy] = react.useState(false);
+				const [err, setErr] = react.useState(null);
+				const [showAdd, setShowAdd] = react.useState(false);
+				const [form, setForm] = react.useState({ serverName: "", transport: "stdio", command: "", args: "", url: "", env: "{}", desc: "" });
+				const [editingId, setEditingId] = react.useState(null);
+				const [editForm, setEditForm] = react.useState({ serverName: "", desc: "", command: "", args: "", url: "", env: "{}" });
+				const refresh = react.useCallback(() => {
+					let dead = false;
+					setBusy(true);
+					fetch("/vscode-files/mcp")
+						.then((r) => r.json())
+						.then((d) => { if (!dead) { setServers(d && d.ok ? d.servers : []); setErr(null); } })
+						.catch((e) => { if (!dead) setErr(String(e)); })
+						.finally(() => { if (!dead) setBusy(false); });
+					return () => { dead = true; };
+				}, []);
+				react.useEffect(refresh, [refresh]);
+				const act = (id, kind) => {
+					setBusy(true);
+					setErr(null);
+					fetch("/vscode-files/mcp/" + kind, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ id }) })
+						.then((r) => r.json())
+						.then((d) => { if (!d || !d.ok) setErr((d && d.error) || "操作失败"); refresh(); })
+						.catch((e) => { setErr(String(e)); setBusy(false); });
+				};
+				const submitAdd = () => {
+					let env = {};
+					try {
+						env = JSON.parse(form.env || "{}");
+						if (typeof env !== "object" || env === null || Array.isArray(env)) throw new Error("not object");
+					} catch {
+						setErr("环境变量需为 JSON 对象，如 {\"KEY\":\"value\"}");
+						return;
+					}
+					setBusy(true);
+					setErr(null);
+					fetch("/vscode-files/mcp/add", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({
+						serverName: form.serverName.trim(),
+						transport: form.transport,
+						command: form.command.trim(),
+						args: form.args.split(/[\s,]+/).filter(Boolean),
+						url: form.url.trim(),
+						env,
+						desc: form.desc.trim()
+					}) })
+						.then((r) => r.json())
+						.then((d) => {
+							setBusy(false);
+							if (!d || !d.ok) setErr((d && d.error) || "添加失败");
+							else {
+								setShowAdd(false);
+								setForm({ serverName: "", transport: "stdio", command: "", args: "", url: "", env: "{}", desc: "" });
+								refresh();
+							}
+						})
+						.catch((e) => { setBusy(false); setErr(String(e)); });
+				};
+				const startEdit = (s) => {
+					setEditingId(s.id);
+					setEditForm({
+						serverName: s.serverName || "",
+						desc: s.desc || "",
+						command: s.command || "",
+						args: Array.isArray(s.args) ? s.args.join(" ") : "",
+						url: s.url || "",
+						env: '{"SEE_EDIT": "已保存的密钥不会显示，重新提交会覆盖"}'
+					});
+				};
+				const submitEdit = () => {
+					setBusy(true);
+					setErr(null);
+					fetch("/vscode-files/mcp/edit", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({
+						id: editingId,
+						serverName: editForm.serverName.trim(),
+						desc: editForm.desc.trim(),
+						command: editForm.command.trim(),
+						args: editForm.args.split(/[\s,]+/).filter(Boolean),
+						url: editForm.url.trim()
+					}) })
+						.then((r) => r.json())
+						.then((d) => {
+							setBusy(false);
+							if (!d || !d.ok) setErr((d && d.error) || "编辑失败");
+							else {
+								setEditingId(null);
+								refresh();
+							}
+						})
+						.catch((e) => { setBusy(false); setErr(String(e)); });
+				};
+				return h("div", { className: "vk_personaSection" },
+					h("div", { className: "vk_mgrHead" },
+						h("div", { className: "vk_personaDesc", style: { flex: 1 } }, "管理 MCP server（~/.dsh/mcp-servers.json，含密钥，请勿外传）。开关即时生效，无需重启。"),
+						h("button", { className: "vk_mgrBtn", onClick: () => setShowAdd(!showAdd) }, showAdd ? "取消添加" : "＋ 添加 MCP"),
+						h("button", { className: "vk_mgrBtn", onClick: refresh, disabled: busy }, "刷新")
+					),
+					err !== null ? h("div", { className: "vk_personaMsg vk_personaMsgErr" }, String(err)) : null,
+					showAdd ? h("div", { className: "vk_mgrAddForm" },
+						h("div", { className: "vk_mgrLabel" }, "serverName（唯一标识，1-32 位字母/数字/_-）"),
+						h("input", { className: "vk_mgrInput", value: form.serverName, onChange: (e) => setForm({ ...form, serverName: e.target.value }), placeholder: "my-server" }),
+						h("div", { className: "vk_mgrLabel" }, "描述（用途说明，帮助 AI 判断何时调用此服务）"),
+						h("input", { className: "vk_mgrInput", value: form.desc, onChange: (e) => setForm({ ...form, desc: e.target.value }), placeholder: "例如：连接 BOSS 项目 MySQL 数据库，可查询物业表、合同表等" }),
+						h("div", { className: "vk_mgrLabel" }, "传输类型"),
+						h("select", { className: "vk_mgrInput", value: form.transport, onChange: (e) => setForm({ ...form, transport: e.target.value }) },
+							h("option", { value: "stdio" }, "stdio（本地进程）"),
+							h("option", { value: "streamable-http" }, "streamable-http（远程 URL）")
+						),
+						form.transport === "stdio"
+							? h("div", { className: "vk_mgrLabel" }, "命令（参数用空格/逗号分隔）")
+							: h("div", { className: "vk_mgrLabel" }, "URL"),
+						form.transport === "stdio"
+							? h("input", { className: "vk_mgrInput", value: form.command, onChange: (e) => setForm({ ...form, command: e.target.value }), placeholder: "npx @playwright/mcp@latest --browser msedge" })
+							: h("input", { className: "vk_mgrInput", value: form.url, onChange: (e) => setForm({ ...form, url: e.target.value }), placeholder: "https://example.com/mcp" }),
+						form.transport === "stdio"
+							? h("div", { className: "vk_mgrLabel" }, "环境变量（JSON 对象，可含密钥）")
+							: h("div", { className: "vk_mgrLabel" }, "请求头（JSON 对象，可含密钥）"),
+						h("input", { className: "vk_mgrInput", value: form.env, onChange: (e) => setForm({ ...form, env: e.target.value }), placeholder: '{"KEY":"value"}' }),
+						h("div", { className: "vk_personaFoot" },
+							h("button", { className: "vk_mgrBtn", onClick: () => setShowAdd(false) }, "取消"),
+							h("div", { style: { flex: 1 } }),
+							h("button", { className: "vk_mgrBtn vk_mgrBtnPrimary", disabled: busy, onClick: submitAdd }, "添加并启用")
+						)
+					) : null,
+					editingId !== null ? h("div", { className: "vk_mgrAddForm" },
+						h("div", { className: "vk_mgrLabel" }, "serverName"),
+						h("input", { className: "vk_mgrInput", value: editForm.serverName, onChange: (e) => setEditForm({ ...editForm, serverName: e.target.value }), placeholder: "my-server" }),
+						h("div", { className: "vk_mgrLabel" }, "描述（用途说明，帮助 AI 判断何时调用此服务）"),
+						h("input", { className: "vk_mgrInput", value: editForm.desc, onChange: (e) => setEditForm({ ...editForm, desc: e.target.value }), placeholder: "例如：连接 BOSS 项目 MySQL 数据库" }),
+						h("div", { className: "vk_mgrLabel" }, "命令/URL"),
+						h("input", { className: "vk_mgrInput", value: editForm.command || editForm.url, onChange: (e) => {
+							const s = servers.find(x => x.id === editingId);
+							if (s && s.transport === "stdio") setEditForm({ ...editForm, command: e.target.value });
+							else setEditForm({ ...editForm, url: e.target.value });
+						}, placeholder: "命令或 URL" }),
+						h("div", { className: "vk_mgrLabel" }, "环境变量 / 请求头（已保存的密钥不回显，留空不修改）"),
+						h("input", { className: "vk_mgrInput", value: editForm.env, onChange: (e) => setEditForm({ ...editForm, env: e.target.value }), placeholder: '{"KEY":"value"}' }),
+						h("div", { className: "vk_personaFoot" },
+							h("button", { className: "vk_mgrBtn", onClick: () => setEditingId(null) }, "取消"),
+							h("div", { style: { flex: 1 } }),
+							h("button", { className: "vk_mgrBtn vk_mgrBtnPrimary", disabled: busy, onClick: submitEdit }, "保存修改")
+						)
+					) : null,
+					servers === null ? h("div", { className: "vk_mgrEmpty" }, "加载中…")
+						: servers.length === 0 ? h("div", { className: "vk_mgrEmpty" }, "暂无 MCP server，点「＋ 添加 MCP」添加")
+						: h("div", { className: "vk_mgrList" },
+							servers.map((s) => h("div", { key: s.id, className: "vk_mgrRow" },
+								h("div", { className: "vk_mgrInfo" },
+									h("div", { className: "vk_mgrName" }, s.serverName),
+									h("div", { className: "vk_mgrMeta" }, (s.transport === "stdio" ? (s.command || "stdio") : (s.url || "http")) + (s.hasEnv ? " · 含环境变量" : "")),
+									s.desc ? h("div", { className: "vk_mgrDesc", title: s.desc }, s.desc.length > 60 ? s.desc.slice(0, 60) + "…" : s.desc) : null
+								),
+								h("span", { className: "vk_mgrBadge " + (s.enabled ? "vk_mgrBadgeOn" : "vk_mgrBadgeOff") }, s.enabled ? "开启" : "关闭"),
+								h("button", { className: "vk_mgrBtn", disabled: busy, onClick: () => act(s.id, "toggle") }, s.enabled ? "关闭" : "开启"),
+								h("button", { className: "vk_mgrBtn", disabled: busy, onClick: () => startEdit(s) }, "编辑"),
+								h("button", { className: "vk_mgrBtn vk_mgrBtnDanger", disabled: busy, onClick: () => { if (window.confirm("确定删除 MCP「" + s.serverName + "」？")) act(s.id, "delete"); } }, "删除")
+							))
+						)
+				);
+			}
+
+			// 组件：Git 配置分区（设置面板）
+		// ──────────────────────────────────────────────────────────────
+		function GitConfigSection() {
+			const [version, setVersion] = react.useState(null);
+			react.useEffect(() => {
 				let dead = false;
-				setBusy(true);
-				fetch("/vscode-files/mcp")
+				fetch("/vscode-files/git/version")
 					.then((r) => r.json())
-					.then((d) => { if (!dead) { setServers(d && d.ok ? d.servers : []); setErr(null); } })
-					.catch((e) => { if (!dead) setErr(String(e)); })
-					.finally(() => { if (!dead) setBusy(false); });
+					.then((d) => { if (!dead && d && d.ok) setVersion(d.version); })
+					.catch(() => { if (!dead) setVersion(null); });
 				return () => { dead = true; };
 			}, []);
-			react.useEffect(refresh, [refresh]);
-			const act = (id, kind) => {
-				setBusy(true);
-				setErr(null);
-				fetch("/vscode-files/mcp/" + kind, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ id }) })
-					.then((r) => r.json())
-					.then((d) => { if (!d || !d.ok) setErr((d && d.error) || "操作失败"); refresh(); })
-					.catch((e) => { setErr(String(e)); setBusy(false); });
-			};
-			const submitAdd = () => {
-				let env = {};
-				try {
-					env = JSON.parse(form.env || "{}");
-					if (typeof env !== "object" || env === null || Array.isArray(env)) throw new Error("not object");
-				} catch {
-					setErr("环境变量需为 JSON 对象，如 {\"KEY\":\"value\"}");
-					return;
-				}
-				setBusy(true);
-				setErr(null);
-				fetch("/vscode-files/mcp/add", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({
-					serverName: form.serverName.trim(),
-					transport: form.transport,
-					command: form.command.trim(),
-					args: form.args.split(/[\s,]+/).filter(Boolean),
-					url: form.url.trim(),
-					env
-				}) })
-					.then((r) => r.json())
-					.then((d) => {
-						setBusy(false);
-						if (!d || !d.ok) setErr((d && d.error) || "添加失败");
-						else {
-							setShowAdd(false);
-							setForm({ serverName: "", transport: "stdio", command: "", args: "", url: "", env: "{}" });
-							refresh();
-						}
-					})
-					.catch((e) => { setBusy(false); setErr(String(e)); });
-			};
 			return h("div", { className: "vk_personaSection" },
-				h("div", { className: "vk_mgrHead" },
-					h("div", { className: "vk_personaDesc", style: { flex: 1 } }, "管理 MCP server（~/.dsh/mcp-servers.json，含密钥，请勿外传）。开关即时生效，无需重启。"),
-					h("button", { className: "vk_mgrBtn", onClick: () => setShowAdd(!showAdd) }, showAdd ? "取消添加" : "＋ 添加 MCP"),
-					h("button", { className: "vk_mgrBtn", onClick: refresh, disabled: busy }, "刷新")
-				),
-				err !== null ? h("div", { className: "vk_personaMsg vk_personaMsgErr" }, String(err)) : null,
-				showAdd ? h("div", { className: "vk_mgrAddForm" },
-					h("div", { className: "vk_mgrLabel" }, "serverName（唯一标识，1-32 位字母/数字/_-）"),
-					h("input", { className: "vk_mgrInput", value: form.serverName, onChange: (e) => setForm({ ...form, serverName: e.target.value }), placeholder: "my-server" }),
-					h("div", { className: "vk_mgrLabel" }, "传输类型"),
-					h("select", { className: "vk_mgrInput", value: form.transport, onChange: (e) => setForm({ ...form, transport: e.target.value }) },
-						h("option", { value: "stdio" }, "stdio（本地进程）"),
-						h("option", { value: "streamable-http" }, "streamable-http（远程 URL）")
-					),
-					form.transport === "stdio"
-						? h("div", { className: "vk_mgrLabel" }, "命令（参数用空格/逗号分隔）")
-						: h("div", { className: "vk_mgrLabel" }, "URL"),
-					form.transport === "stdio"
-						? h("input", { className: "vk_mgrInput", value: form.command, onChange: (e) => setForm({ ...form, command: e.target.value }), placeholder: "npx @playwright/mcp@latest --browser msedge" })
-						: h("input", { className: "vk_mgrInput", value: form.url, onChange: (e) => setForm({ ...form, url: e.target.value }), placeholder: "https://example.com/mcp" }),
-					form.transport === "stdio"
-						? h("div", { className: "vk_mgrLabel" }, "环境变量（JSON 对象，可含密钥）")
-						: h("div", { className: "vk_mgrLabel" }, "请求头（JSON 对象，可含密钥）"),
-					h("input", { className: "vk_mgrInput", value: form.env, onChange: (e) => setForm({ ...form, env: e.target.value }), placeholder: '{"KEY":"value"}' }),
-					h("div", { className: "vk_personaFoot" },
-						h("button", { className: "vk_mgrBtn", onClick: () => setShowAdd(false) }, "取消"),
-						h("div", { style: { flex: 1 } }),
-						h("button", { className: "vk_mgrBtn vk_mgrBtnPrimary", disabled: busy, onClick: submitAdd }, "添加并启用")
-					)
-				) : null,
-				servers === null ? h("div", { className: "vk_mgrEmpty" }, "加载中…")
-					: servers.length === 0 ? h("div", { className: "vk_mgrEmpty" }, "暂无 MCP server，点「＋ 添加 MCP」添加")
-					: h("div", { className: "vk_mgrList" },
-						servers.map((s) => h("div", { key: s.id, className: "vk_mgrRow" },
-							h("div", { className: "vk_mgrInfo" },
-								h("div", { className: "vk_mgrName" }, s.serverName),
-								h("div", { className: "vk_mgrMeta" }, (s.transport === "stdio" ? (s.command || "stdio") : (s.url || "http")) + (s.hasEnv ? " · 含环境变量" : ""))
-							),
-							h("span", { className: "vk_mgrBadge " + (s.enabled ? "vk_mgrBadgeOn" : "vk_mgrBadgeOff") }, s.enabled ? "开启" : "关闭"),
-							h("button", { className: "vk_mgrBtn", disabled: busy, onClick: () => act(s.id, "toggle") }, s.enabled ? "关闭" : "开启"),
-							h("button", { className: "vk_mgrBtn vk_mgrBtnDanger", disabled: busy, onClick: () => { if (window.confirm("确定删除 MCP「" + s.serverName + "」？")) act(s.id, "delete"); } }, "删除")
-						))
-					)
+				h("div", { className: "vk_settingsCard" },
+					h("div", { className: "vk_settingsCardLabel", style: { fontWeight: 600 } }, "Git 配置"),
+					h("div", { className: "vk_settingsCardDesc" }, "Git 面板提供暂存、提交、Diff 查看、历史浏览等功能。"),
+					version !== null ? h("div", { className: "vk_settingsCardDesc" }, "Git 版本：" + version) : null,
+					version === null ? h("div", { className: "vk_settingsCardDesc" }, "正在检测 Git 版本…") : null
+				)
 			);
 		}
 
 		// ──────────────────────────────────────────────────────────────
-		// 组件：左栏（文件/会话 双 Tab）与 右栏（对话/详情 双 Tab）
+		// 组件：Git 面板（仓库选择器、变更列表、Diff、历史、提交详情）
 		// ──────────────────────────────────────────────────────────────
-		function LeftPanel({ tab, onTab, tree, sessionSlot, collapsed, onExpand, onCollapse }) {
+		function GitPanel({ root }) {
+			const [repos, setRepos] = react.useState([]);
+			const [selectedRepo, setSelectedRepo] = react.useState(null);
+			const [ws, setWs] = react.useState(null); // workstatus
+			const [diff, setDiff] = react.useState(null);
+			const [history, setHistory] = react.useState(null);
+			const [commitMsg, setCommitMsg] = react.useState("");
+			const [committing, setCommitting] = react.useState(false);
+			const [msg, setMsg] = react.useState(null);
+			const [activeTab, setActiveTab] = react.useState("changes");
+			const [currentBranch, setCurrentBranch] = react.useState("");
+			const [branchList, setBranchList] = react.useState([]);
+			const [worktrees, setWorktrees] = react.useState([]);
+			const [expandedFile, setExpandedFile] = react.useState(null); // 展开的 inline diff
+			const [inlineDiff, setInlineDiff] = react.useState(null);
+			const [suggestions, setSuggestions] = react.useState([]);
+			const [commitDetail, setCommitDetail] = react.useState(null); // 提交详情
+			// 发现仓库
+			react.useEffect(() => {
+				if (typeof root !== "string" || root.length === 0) return;
+				let dead = false;
+				fetch("/vscode-files/git?path=" + encodeURIComponent(root), { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ action: "repos" }) })
+					.then((r) => r.json())
+					.then((d) => { if (!dead && d && d.ok && Array.isArray(d.repos)) { setRepos(d.repos); if (d.repos.length > 0 && selectedRepo === null) setSelectedRepo(d.repos[0]); else if (d.repos.length === 0) setSelectedRepo(null); } })
+					.catch(() => {});
+				return () => { dead = true; };
+			}, [root]);
+			// 刷新工作区状态
+			const refresh = react.useCallback(() => {
+				if (selectedRepo === null) return;
+				setExpandedFile(null);
+				setInlineDiff(null);
+				fetch("/vscode-files/git?path=" + encodeURIComponent(selectedRepo), { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ action: "workstatus" }) })
+					.then((r) => r.json())
+					.then((d) => {
+						if (d && d.ok) { setWs(d); setCurrentBranch(d.branch || ""); } else setWs(null);
+					})
+					.catch(() => { setWs(null); });
+				fetch("/vscode-files/git?path=" + encodeURIComponent(selectedRepo), { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ action: "branches" }) })
+					.then((r) => r.json())
+					.then((d) => { if (d && d.ok) setBranchList(d.branches || []); })
+					.catch(() => {});
+				fetch("/vscode-files/git?path=" + encodeURIComponent(selectedRepo), { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ action: "worktrees" }) })
+					.then((r) => r.json())
+					.then((d) => { if (d && d.ok) setWorktrees(d.worktrees || []); })
+					.catch(() => {});
+			}, [selectedRepo]);
+			react.useEffect(() => { if (selectedRepo) refresh(); }, [selectedRepo, refresh]);
+			// 暂存/取消暂存/还原/全部暂存
+			const stage = react.useCallback((file) => { if (selectedRepo === null) return; setMsg(null); fetch("/vscode-files/git?path=" + encodeURIComponent(selectedRepo), { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ action: "add", files: [file] }) }).then((r) => r.json()).then((d) => { if (d && d.ok) refresh(); }); }, [selectedRepo, refresh]);
+			const unstage = react.useCallback((file) => { if (selectedRepo === null) return; setMsg(null); fetch("/vscode-files/git?path=" + encodeURIComponent(selectedRepo), { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ action: "unstage", files: [file] }) }).then((r) => r.json()).then((d) => { if (d && d.ok) refresh(); }); }, [selectedRepo, refresh]);
+			const doRestore = react.useCallback((file) => { if (selectedRepo === null) return; if (typeof confirm === "function" && !confirm("确定还原「" + file + "」？未暂存的更改将丢失。")) return; fetch("/vscode-files/git?path=" + encodeURIComponent(selectedRepo), { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ action: "restore", files: [file] }) }).then((r) => r.json()).then((d) => { if (d && d.ok) refresh(); }); }, [selectedRepo, refresh]);
+			const stageAll = react.useCallback(() => { if (selectedRepo === null) return; setMsg(null); fetch("/vscode-files/git?path=" + encodeURIComponent(selectedRepo), { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ action: "stage-all" }) }).then((r) => r.json()).then((d) => { if (d && d.ok) { setMsg({ ok: true, text: "已全部暂存 ✓" }); refresh(); } else setMsg({ ok: false, text: (d && d.error) || "暂存失败" }); }); }, [selectedRepo, refresh]);
+			// 内联 diff 展开/收起
+			const toggleInlineDiff = react.useCallback((file, mode) => {
+				if (expandedFile === file) { setExpandedFile(null); setInlineDiff(null); return; }
+				setExpandedFile(file);
+				setInlineDiff(null);
+				fetch("/vscode-files/git?path=" + encodeURIComponent(selectedRepo), { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ action: "workfile", file, mode }) })
+					.then((r) => r.json())
+					.then((d) => { setInlineDiff(d && d.ok ? d : null); });
+			}, [selectedRepo, expandedFile]);
+			// 提交
+			const doCommit = react.useCallback(() => {
+				if (selectedRepo === null || commitMsg.trim().length === 0) return;
+				setCommitting(true); setMsg(null);
+				fetch("/vscode-files/git?path=" + encodeURIComponent(selectedRepo), { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ action: "commit", message: commitMsg.trim() }) })
+					.then((r) => r.json())
+					.then((d) => { setCommitting(false); if (d && d.ok) { setCommitMsg(""); setMsg({ ok: true, text: "提交成功 ✓" }); refresh(); } else setMsg({ ok: false, text: (d && d.error) || "提交失败" }); })
+					.catch((e) => { setCommitting(false); setMsg({ ok: false, text: String(e) }); });
+			}, [selectedRepo, commitMsg, refresh]);
+			// AI 提交信息建议
+			const loadSuggestions = react.useCallback(() => {
+				if (selectedRepo === null) return;
+				setSuggestions([]);
+				fetch("/vscode-files/git?path=" + encodeURIComponent(selectedRepo), { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ action: "suggestmsg" }) })
+					.then((r) => r.json())
+					.then((d) => { if (d && d.ok && Array.isArray(d.candidates)) setSuggestions(d.candidates); });
+			}, [selectedRepo]);
+			// 查看历史（提交图谱）
+			const loadHistory = react.useCallback(() => {
+				if (selectedRepo === null) return;
+				setActiveTab("history"); setHistory(null); setCommitDetail(null);
+				fetch("/vscode-files/git?path=" + encodeURIComponent(selectedRepo), { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ action: "graph", max: 50 }) })
+					.then((r) => r.json())
+					.then((d) => { setHistory(d && d.ok ? d.commits : null); });
+			}, [selectedRepo]);
+			// 查看提交详情
+			const showCommit = react.useCallback((hash) => {
+				if (selectedRepo === null) return;
+				setActiveTab("commit-detail");
+				setCommitDetail(null);
+				Promise.all([
+					fetch("/vscode-files/git?path=" + encodeURIComponent(selectedRepo), { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ action: "show", hash }) }).then((r) => r.json()),
+					fetch("/vscode-files/git?path=" + encodeURIComponent(selectedRepo), { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ action: "commit-diff", hash }) }).then((r) => r.json())
+				]).then(([info, d]) => {
+					if (info && info.ok) setCommitDetail({ ...info, diff: d && d.ok ? d.diff : "", truncated: d && d.truncated });
+				});
+			}, [selectedRepo]);
+			// Fetch / Push / 切换分支
+			const doFetch = react.useCallback(() => {
+				if (selectedRepo === null) return; setMsg(null);
+				fetch("/vscode-files/git?path=" + encodeURIComponent(selectedRepo), { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ action: "fetch" }) })
+					.then((r) => r.json()).then((d) => { setMsg({ ok: d && d.ok, text: d && d.ok ? "拉取完成 ✓" : ((d && d.error) || "拉取失败") }); refresh(); });
+			}, [selectedRepo, refresh]);
+			const doPush = react.useCallback(() => {
+				if (selectedRepo === null) return; setMsg(null);
+				fetch("/vscode-files/git?path=" + encodeURIComponent(selectedRepo), { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ action: "push" }) })
+					.then((r) => r.json()).then((d) => { setMsg({ ok: d && d.ok, text: d && d.ok ? "推送完成 ✓" : ((d && d.error) || "推送失败") }); refresh(); });
+			}, [selectedRepo, refresh]);
+			const doCheckout = react.useCallback((branch) => {
+				if (selectedRepo === null) return; setMsg(null);
+				fetch("/vscode-files/git?path=" + encodeURIComponent(selectedRepo), { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ action: "checkout", branch }) })
+					.then((r) => r.json()).then((d) => { setMsg({ ok: d && d.ok, text: d && d.ok ? "已切换到 " + branch : ((d && d.error) || "切换失败") }); refresh(); });
+			}, [selectedRepo, refresh]);
+			const repoChanged = react.useCallback((e) => { setSelectedRepo(e.target.value); setWs(null); setDiff(null); setHistory(null); setCurrentBranch(""); setBranchList([]); setWorktrees([]); setCommitDetail(null); setActiveTab("changes"); }, []);
+
+			if (typeof root !== "string" || root.length === 0) return h("div", { className: "vk_gitPanel" }, h("div", { className: "vk_gitEmpty" }, "请先打开一个工作区文件夹"));
+			if (repos.length === 0) return h("div", { className: "vk_gitPanel" }, h("div", { className: "vk_gitEmpty" }, "扫描 Git 仓库中…\n（如果当前目录已是 Git 仓库，稍后会自动出现）"));
+
+			// 状态徽标
+			const statusLabel = (code) => {
+				if (code === "M" || code === " M") return { text: "M", cls: "vk_gitM" };
+				if (code === "A" || code === " A") return { text: "A", cls: "vk_gitA" };
+				if (code === "D" || code === " D") return { text: "D", cls: "vk_gitD" };
+				if (code === "R" || code === " R") return { text: "R", cls: "vk_gitR" };
+				if (code === "??") return { text: "U", cls: "vk_gitU" };
+				return { text: "M", cls: "vk_gitM" };
+			};
+			// 单个变更条目（含 +/- 计数和内联 diff）
+			const changeItem = (item, isStaged) => {
+				const label = statusLabel(item.code);
+				const cnt = (item.added || 0) + (item.deleted || 0) > 0 ? h("span", { className: "vk_gitCnt" }, "+" + (item.added || 0) + " -" + (item.deleted || 0)) : null;
+				const isExpanded = expandedFile === item.path;
+				const mode = isStaged ? "staged" : (item.code === "??" ? "untracked" : "unstaged");
+				return h("div", { key: item.path },
+					h("div", { className: "vk_gitChangeItem", onClick: () => toggleInlineDiff(item.path, mode) },
+						h("span", { className: "vk_gitChangeStatus " + label.cls }, label.text),
+						h("span", { className: "vk_gitChangeName", title: item.path }, item.path.split("/").pop()),
+						cnt,
+						h("div", { style: { flex: 1 } }),
+						isStaged
+							? h("button", { className: "vk_gitChangeAction", title: "取消暂存", onClick: (e) => { e.stopPropagation(); unstage(item.path); } }, "取消暂存")
+							: h("button", { className: "vk_gitChangeAction", title: "暂存", onClick: (e) => { e.stopPropagation(); stage(item.path); } }, "暂存"),
+						!isStaged && item.code !== "??"
+							? h("button", { className: "vk_gitChangeAction vk_gitChangeActionDanger", title: "还原", onClick: (e) => { e.stopPropagation(); doRestore(item.path); } }, "还原")
+							: null
+					),
+					isExpanded ? h("div", { className: "vk_gitInlineDiff" },
+						inlineDiff === null ? "加载中…" : (inlineDiff && inlineDiff.diff ? inlineDiff.diff : (inlineDiff && inlineDiff.content ? inlineDiff.content : "无内容"))
+					) : null
+				);
+			};
+			// Tab 栏
+			const tabBar = h("div", { className: "vk_tabBar" },
+				h("button", { className: "vk_tabBtn" + (activeTab === "changes" ? " vk_tabBtnActive" : ""), onClick: () => setActiveTab("changes") }, "变更"),
+				h("button", { className: "vk_tabBtn" + (activeTab === "history" ? " vk_tabBtnActive" : ""), onClick: loadHistory }, "历史"),
+				commitDetail !== null ? h("button", { className: "vk_tabBtn" + (activeTab === "commit-detail" ? " vk_tabBtnActive" : ""), onClick: () => setActiveTab("commit-detail") }, "提交详情") : null,
+				h("div", { className: "vk_tabBarSpacer" }),
+				repos.length > 1 ? h("select", { className: "vk_gitRepoSelect", value: selectedRepo || "", onChange: repoChanged }, repos.map((r) => h("option", { key: r, value: r }, r.split(/[\\/]/).pop() || r))) : null
+			);
+			// 历史标签页
+			if (activeTab === "history") {
+				return h("div", { className: "vk_gitPanel" },
+					tabBar,
+					h(HistoryView, { history, onClose: () => setActiveTab("changes"), onShowCommit: showCommit })
+				);
+			}
+			// 提交详情标签页
+			if (activeTab === "commit-detail" && commitDetail !== null) {
+				return h("div", { className: "vk_gitPanel" },
+					tabBar,
+					h(CommitDetailView, { detail: commitDetail, onClose: () => { setCommitDetail(null); setActiveTab("changes"); } })
+				);
+			}
+			// 变更标签页
+			const totalChanges = ws ? (ws.staged || []).length + (ws.unstaged || []).length + (ws.untracked || []).length : 0;
+			const hasUnstaged = ws && ((ws.unstaged || []).length + (ws.untracked || []).length > 0);
+			return h("div", { className: "vk_gitPanel" },
+				tabBar,
+				h("div", { className: "vk_gitToolbar" },
+					h("button", { className: "vk_gitToolBtn", onClick: refresh }, "⟳"),
+					currentBranch ? h("select", { className: "vk_gitRepoSelect", style: { flex: "none", maxWidth: 140 }, value: currentBranch, onChange: (e) => { if (e.target.value !== currentBranch) doCheckout(e.target.value); } },
+						branchList.filter((b) => !b.isRemote).map((b) => h("option", { key: b.name, value: b.name }, (b.isHead ? "✓ " : "") + b.name)),
+						currentBranch ? h("option", { key: "__sep", disabled: true, style: { display: "none" } }) : null
+					) : currentBranch ? h("span", { style: { fontSize: 11, color: "var(--dsw-alias-label-secondary)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" } }, "🌿 " + currentBranch + (worktrees.length > 1 ? " (+" + (worktrees.length - 1) + " wt)" : "")) : null,
+					h("button", { className: "vk_gitToolBtn", title: "拉取", onClick: doFetch, style: { fontSize: 14 } }, "⬇"),
+					h("button", { className: "vk_gitToolBtn", title: "推送", onClick: doPush, style: { fontSize: 14 } }, "⬆"),
+					h("div", { style: { flex: 1 } }),
+					hasUnstaged ? h("button", { className: "vk_gitToolBtn", title: "暂存所有未暂存/未跟踪的更改", onClick: stageAll, style: { fontSize: 11 } }, "全部暂存") : null,
+					ws && ws.staged && ws.staged.length > 0 ? h("button", { className: "vk_gitToolBtnPrimary", title: "提交更改", onClick: () => { const ta = document.querySelector(".vk_gitCommitInput"); if (ta) ta.focus(); } }, "提交") : null,
+					msg !== null ? h("span", { style: { fontSize: 11, color: msg.ok ? "#73c991" : "#f14c4c" } }, msg.text) : null
+				),
+				ws && ws.staged && ws.staged.length > 0 ? h("div", { className: "vk_gitSection" },
+					h("div", { className: "vk_gitSectionTitle" }, "已暂存 (" + ws.staged.length + ")"),
+					...ws.staged.map((item) => changeItem(item, true))
+				) : null,
+				ws && ws.unstaged && ws.unstaged.length > 0 ? h("div", { className: "vk_gitSection" },
+					h("div", { className: "vk_gitSectionTitle" }, "未暂存 (" + ws.unstaged.length + ")"),
+					...ws.unstaged.map((item) => changeItem(item, false))
+				) : null,
+				ws && ws.untracked && ws.untracked.length > 0 ? h("div", { className: "vk_gitSection" },
+					h("div", { className: "vk_gitSectionTitle" }, "未跟踪 (" + ws.untracked.length + ")"),
+					...ws.untracked.map((item) => changeItem(item, false))
+				) : null,
+				(!ws || (ws.staged || []).length + (ws.unstaged || []).length + (ws.untracked || []).length === 0)
+					? h("div", { className: "vk_gitEmpty" }, "工作区干净，没有变更")
+					: null,
+				totalChanges > 0 ? h("div", { className: "vk_gitCommitForm" },
+					h("div", { style: { display: "flex", gap: 4 } },
+						h("textarea", { className: "vk_gitCommitInput", style: { flex: 1, minHeight: 40 }, placeholder: "提交说明（Ctrl+Enter 提交）", value: commitMsg, onChange: (e) => setCommitMsg(e.target.value),
+							onKeyDown: (e) => { if ((e.ctrlKey || e.metaKey) && e.key === "Enter") doCommit(); }
+						}),
+						h("button", { className: "vk_gitToolBtn", title: "AI 生成提交信息", style: { alignSelf: "flex-start", fontSize: 11 }, onClick: loadSuggestions }, "✨ AI")
+					),
+					suggestions.length > 0 ? h("div", { style: { display: "flex", flexDirection: "column", gap: 2, marginTop: 4 } },
+						suggestions.map((s, i) => h("button", { key: i, className: "vk_gitToolBtn", style: { textAlign: "left", fontSize: 11, padding: "3px 6px" }, onClick: () => { setCommitMsg(s); setSuggestions([]); } }, s))
+					) : null,
+					h("div", { className: "vk_gitCommitRow" },
+						h("button", { className: "vk_gitCommitBtn", disabled: committing || commitMsg.trim().length === 0, onClick: doCommit }, committing ? "提交中…" : "提交 ✓")
+					)
+				) : null
+			);
+		}
+
+		// ──────────────────────────────────────────────────────────────
+		// 组件：Diff 查看器（VSCode 式红绿行级对比）
+		// ──────────────────────────────────────────────────────────────
+		function DiffViewer({ diff, onClose }) {
+			if (diff === null) return h("div", { className: "vk_gitDiffView" }, h("div", { className: "vk_gitEmpty" }, "加载中…"));
+			if (diff.error) return h("div", { className: "vk_gitDiffView" }, h("div", { className: "vk_gitEmpty" }, diff.error));
+			if (!diff.diff || diff.diff.length === 0) return h("div", { className: "vk_gitDiffView" }, h("div", { className: "vk_gitEmpty" }, "没有差异"));
+			const lines = diff.diff.split("\n");
+			const out = [];
+			for (let i = 0; i < lines.length; i++) {
+				const line = lines[i];
+				if (line.startsWith("diff --git")) {
+					const filePath = line.split(" b/").pop() || "";
+					out.push(h("div", { key: "file-" + i, className: "vk_gitDiffFile" }, "📄 " + filePath + (diff.staged ? " (已暂存)" : "")));
+				} else if (line.startsWith("@@")) {
+					out.push(h("div", { key: "hunk-" + i, className: "vk_gitDiffHunk" }, line));
+				} else if (line.startsWith("+") && !line.startsWith("+++")) {
+					out.push(h("div", { key: i, className: "vk_gitDiffLine vk_gitDiffAdd" },
+						h("span", { className: "vk_gitDiffSign" }, "+"), h("span", null, line.slice(1))
+					));
+				} else if (line.startsWith("-") && !line.startsWith("---")) {
+					out.push(h("div", { key: i, className: "vk_gitDiffLine vk_gitDiffDel" },
+						h("span", { className: "vk_gitDiffSign" }, "-"), h("span", null, line.slice(1))
+					));
+				} else if (!line.startsWith("---") && !line.startsWith("+++") && !line.startsWith("index ") && !line.startsWith("new file") && !line.startsWith("deleted file")) {
+					out.push(h("div", { key: i, className: "vk_gitDiffLine" },
+						h("span", { className: "vk_gitDiffSign" }, " "), h("span", null, line)
+					));
+				}
+			}
+			return h("div", { className: "vk_gitDiffView" },
+				h("div", { className: "vk_gitToolbar" },
+					h("button", { className: "vk_gitToolBtn", onClick: onClose }, "← 返回变更"),
+					h("span", { style: { fontSize: 11, color: "var(--dsw-alias-label-secondary)", marginLeft: 8 } }, diff.file || "")
+				),
+				out
+			);
+		}
+
+		// ──────────────────────────────────────────────────────────────
+		// 组件：提交详情（提交信息 + 文件变更 diff）
+		// ──────────────────────────────────────────────────────────────
+		function CommitDetailView({ detail, onClose }) {
+			if (detail === null) return h("div", { className: "vk_gitDiffView" }, h("div", { className: "vk_gitEmpty" }, "加载中…"));
+			const diffLines = detail.diff ? detail.diff.split("\n") : [];
+			const diffOut = [];
+			for (let i = 0; i < diffLines.length; i++) {
+				const line = diffLines[i];
+				if (line.startsWith("diff --git")) {
+					const filePath = line.split(" b/").pop() || "";
+					diffOut.push(h("div", { key: "file-" + i, className: "vk_gitDiffFile" }, "📄 " + filePath));
+				} else if (line.startsWith("@@")) {
+					diffOut.push(h("div", { key: "hunk-" + i, className: "vk_gitDiffHunk" }, line));
+				} else if (line.startsWith("+") && !line.startsWith("+++")) {
+					diffOut.push(h("div", { key: i, className: "vk_gitDiffLine vk_gitDiffAdd" }, h("span", { className: "vk_gitDiffSign" }, "+"), h("span", null, line.slice(1))));
+				} else if (line.startsWith("-") && !line.startsWith("---")) {
+					diffOut.push(h("div", { key: i, className: "vk_gitDiffLine vk_gitDiffDel" }, h("span", { className: "vk_gitDiffSign" }, "-"), h("span", null, line.slice(1))));
+				} else if (!line.startsWith("---") && !line.startsWith("+++") && !line.startsWith("index ") && !line.startsWith("new file") && !line.startsWith("deleted file")) {
+					diffOut.push(h("div", { key: i, className: "vk_gitDiffLine" }, h("span", { className: "vk_gitDiffSign" }, " "), h("span", null, line)));
+				}
+			}
+			return h("div", { className: "vk_gitDiffView" },
+				h("div", { className: "vk_gitToolbar" },
+					h("button", { className: "vk_gitToolBtn", onClick: onClose }, "← 返回"),
+					h("span", { style: { fontSize: 11, color: "var(--dsw-alias-label-secondary)", marginLeft: 8 } }, detail.hash ? detail.hash.slice(0, 7) : "")
+				),
+				h("div", { style: { padding: "8px 12px", borderBottom: "1px solid var(--dsw-alias-border-l1)" } },
+					h("div", { style: { fontSize: 13, fontWeight: 600, marginBottom: 4 } }, detail.subject || ""),
+					detail.body ? h("div", { style: { fontSize: 11, color: "var(--dsw-alias-label-secondary)", whiteSpace: "pre-wrap", marginBottom: 6 } }, detail.body) : null,
+					h("div", { style: { fontSize: 10, color: "var(--dsw-alias-label-tertiary)", display: "flex", gap: 12 } },
+						h("span", null, "👤 " + (detail.author || "")),
+						h("span", null, "📅 " + (detail.date ? detail.date.slice(0, 10) : "")),
+						detail.parents ? h("span", null, "👨‍👦 " + detail.parents.length + " parent" + (detail.parents.length > 1 ? "s" : "")) : null
+					)
+				),
+				h("div", { style: { flex: 1, minHeight: 0, overflow: "auto" } }, diffOut)
+			);
+		}
+
+		// ──────────────────────────────────────────────────────────────
+		// 组件：历史视图（提交历史列表，点击可查看详情）
+		// ──────────────────────────────────────────────────────────────
+		function HistoryView({ history, onClose, onShowCommit }) {
+			// 计算图谱布局
+			const graphData = react.useMemo(() => {
+				if (!Array.isArray(history) || history.length === 0) return [];
+				const COLORS = ["#ff7b72", "#79c0ff", "#d2a8ff", "#7ee787", "#ffa657", "#e3b341", "#f778ba", "#8b949e"];
+				const hashSet = new Set(history.map((c) => c.hash));
+				const lanes = [];
+				const laneColors = [];
+				const result = [];
+				for (const c of history) {
+					const parents = Array.isArray(c.parents) ? c.parents.filter((p) => hashSet.has(p)) : [];
+					let lane = -1;
+					if (parents.length > 0) {
+						for (let i = 0; i < lanes.length; i++) {
+							if (lanes[i] === parents[0]) { lane = i; break; }
+						}
+					}
+					if (lane === -1) {
+						lane = lanes.length;
+						lanes.push(c.hash);
+						laneColors.push(COLORS[lane % COLORS.length]);
+					} else {
+						lanes[lane] = c.hash;
+					}
+					const parentLanes = parents.map((p) => {
+						const idx = result.findIndex((r) => r.hash === p);
+						return idx >= 0 ? result[idx].lane : -1;
+					}).filter((l) => l >= 0);
+					result.push({ ...c, lane, color: laneColors[lane], parentLanes: [...new Set(parentLanes)] });
+				}
+				return result;
+			}, [history]);
+
+			if (graphData.length === 0) {
+				return h("div", { style: { display: "flex", flexDirection: "column", height: "100%", overflow: "hidden" } },
+					h("div", { className: "vk_gitToolbar" },
+						h("button", { className: "vk_gitToolBtn", onClick: onClose }, "← 返回变更"),
+						h("span", { style: { fontSize: 11, color: "var(--dsw-alias-label-secondary)", marginLeft: 8 } }, "提交历史")
+					),
+					h("div", { className: "vk_gitEmpty" }, history === null ? "加载中…" : "暂无提交记录")
+				);
+			}
+
+			const ROW_H = 48;
+			const GRAPH_W = 48;
+			const DOT_R = 5;
+			const LANE_W = 14;
+			const maxLane = graphData.reduce((max, g) => Math.max(max, g.lane), 0);
+			const graphCenter = GRAPH_W / 2;
+
+			return h("div", { style: { display: "flex", flexDirection: "column", height: "100%", overflow: "hidden" } },
+				h("div", { className: "vk_gitToolbar" },
+					h("button", { className: "vk_gitToolBtn", onClick: onClose }, "← 返回变更"),
+					h("span", { style: { fontSize: 11, color: "var(--dsw-alias-label-secondary)", marginLeft: 8 } }, "提交历史 (" + graphData.length + ")")
+				),
+				h("div", { style: { flex: 1, minHeight: 0, overflow: "auto" } },
+					graphData.map((c, i) => {
+						const y = i * ROW_H + ROW_H / 2;
+						const x = graphCenter + (c.lane - maxLane / 2) * LANE_W;
+						// 分支/标签标签
+						const refs = Array.isArray(c.refs) ? c.refs : [];
+						const refTags = refs.map((r, ri) => {
+							let cls = "vk_gitRefTag";
+							if (r.kind === "tag") cls += " vk_gitRefTagTag";
+							else if (r.head) cls += " vk_gitRefTagHead";
+							else cls += " vk_gitRefTagBranch";
+							return h("span", { key: ri, className: cls }, r.name);
+						});
+						// 连线（使用 SVG）
+						const lines = [];
+						// 垂直延续线（上方）
+						const hasChild = i > 0 && graphData.slice(0, i).some((g) => g.parentLanes.includes(c.lane));
+						// 连接父提交的曲线
+						for (const pl of c.parentLanes) {
+							const pIdx = graphData.findIndex((g) => g.lane === pl && g.hash !== c.hash);
+							if (pIdx < 0 || pIdx <= i) continue;
+							const py = pIdx * ROW_H + ROW_H / 2;
+							const px = graphCenter + (pl - maxLane / 2) * LANE_W;
+							const midY = (y + py) / 2;
+							lines.push(h("svg", { key: "pl" + i + "-" + pl, style: { position: "absolute", left: 0, top: 0, width: GRAPH_W, height: ROW_H * (i + 1), overflow: "visible", pointerEvents: "none" } },
+								h("path", { d: "M" + x + " " + y + " C" + x + " " + midY + "," + px + " " + midY + "," + px + " " + py, stroke: c.color, strokeWidth: 2, fill: "none", opacity: 0.5 })
+							));
+						}
+						return h("div", { key: c.hash, className: "vk_gitHistoryItem", onClick: typeof onShowCommit === "function" ? () => onShowCommit(c.hash) : undefined, title: c.hash, style: { display: "flex", alignItems: "stretch", gap: 0, padding: 0, minHeight: ROW_H } },
+							// 图谱列
+							h("div", { style: { width: GRAPH_W, flex: "none", position: "relative" } },
+								// 垂直延续线
+								h("div", { style: { position: "absolute", left: x - 1, top: 0, width: 2, height: y, background: c.color, opacity: 0.25 } }),
+								// 圆点
+								h("div", { style: { position: "absolute", left: x - DOT_R, top: y - DOT_R, width: DOT_R * 2, height: DOT_R * 2, borderRadius: "50%", background: c.color, border: "2px solid var(--dsw-alias-bg-base)", boxShadow: "0 0 0 1px " + c.color, zIndex: 1 } }),
+								// 连接线
+								lines
+							),
+							// 提交信息列
+							h("div", { style: { flex: 1, minWidth: 0, padding: "7px 10px 7px 4px" } },
+								h("div", { style: { display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" } },
+									h("span", { className: "vk_gitGraphMsg" }, c.subject || c.message || ""),
+									refTags
+								),
+								h("div", { className: "vk_gitGraphMeta" },
+									(c.author || "") + " · " + (c.date ? c.date.slice(0, 10) : "")
+								)
+							)
+						);
+					})
+				)
+			);
+		}
+
+		// ──────────────────────────────────────────────────────────────
+		// 组件：左栏（文件/会话/Git 三 Tab）与 右栏（对话/详情 双 Tab）
+		// ──────────────────────────────────────────────────────────────
+		function LeftPanel({ tab, onTab, tree, sessionSlot, gitSlot, collapsed, onExpand, onCollapse }) {
 			if (collapsed) {
 				return h("div", { className: "vk_colLeft vk_rail" },
 					h("button", { className: "vk_railBtn" + (tab === "files" ? " vk_railBtnActive" : ""), title: "文件", onClick: () => { onTab("files"); onExpand(); } }, h("svg", { width: 16, height: 16, viewBox: "0 0 16 16", fill: "none" }, h("path", { d: "M1.333 2.5A1.167 1.167 0 0 1 2.5 1.333h3.84a1.167 1.167 0 0 1 .825.342l1.86 1.86a.5.5 0 0 0 .353.146H14.5a1.167 1.167 0 0 1 1.167 1.167v8.5a1.167 1.167 0 0 1-1.167 1.167H2.5A1.167 1.167 0 0 1 1.333 12.5V2.5z", fill: "currentColor" }), h("path", { d: "M1.333 2.5A1.167 1.167 0 0 1 2.5 1.333h3.84a1.167 1.167 0 0 1 .825.342l1.86 1.86a.5.5 0 0 0 .353.146H14.5a1.167 1.167 0 0 1 1.167 1.167v8.5a1.167 1.167 0 0 1-1.167 1.167H2.5A1.167 1.167 0 0 1 1.333 12.5V2.5z", fill: "currentColor", opacity: "0.2" }))),
+					h("button", { className: "vk_railBtn" + (tab === "git" ? " vk_railBtnActive" : ""), title: "Git", onClick: () => { onTab("git"); onExpand(); } }, "🌿"),
 					h("button", { className: "vk_railBtn" + (tab === "sessions" ? " vk_railBtnActive" : ""), title: "会话", onClick: () => { onTab("sessions"); onExpand(); } }, "☰"),
 					h("div", { className: "vk_railSpacer" }),
 					h("button", { className: "vk_railBtn", title: "展开侧边栏", onClick: onExpand }, "»"),
@@ -1369,11 +1952,13 @@ window.__ModuleLoader__.load({
 			return h("div", { className: "vk_colLeft" },
 				h("div", { className: "vk_tabBar" },
 					h("button", { className: "vk_tabBtn" + (tab === "files" ? " vk_tabBtnActive" : ""), onClick: () => onTab("files") }, "文件"),
+					h("button", { className: "vk_tabBtn" + (tab === "git" ? " vk_tabBtnActive" : ""), onClick: () => onTab("git") }, "🌿 Git"),
 					h("button", { className: "vk_tabBtn" + (tab === "sessions" ? " vk_tabBtnActive" : ""), onClick: () => onTab("sessions") }, "会话"),
 					h("div", { className: "vk_tabBarSpacer" }),
 					h("button", { className: "vk_tabBtn", title: "收起侧边栏", onClick: onCollapse }, "«")
 				),
 				h("div", { className: "vk_tabBody" + (tab === "files" ? "" : " vk_tabBodyHidden") }, tree),
+				h("div", { className: "vk_tabBody" + (tab === "git" ? "" : " vk_tabBodyHidden") }, gitSlot),
 				h("div", { className: "vk_tabBody" + (tab === "sessions" ? "" : " vk_tabBodyHidden") }, sessionSlot)
 			);
 		}
@@ -1602,6 +2187,7 @@ window.__ModuleLoader__.load({
 				onExpand: () => actions.toggleSidebar(),
 				onCollapse: () => actions.toggleSidebar(),
 				tree: h(FileTree, { root: fileRoot, custom: sessionRoot != null, onOpenFolder: openFolder, onCloseFolder: closeFolder, onOpenFile: openFile, onPickNative: pickFolder, activePath: tabsState.active, onDeleted, onRenamed }),
+				gitSlot: h(GitPanel, { root: fileRoot }),
 				sessionSlot: renderSlot("sidebar", { collapsed: sidebarCollapsed, width: cols.sidebar })
 			});
 			const detailsSlot = renderSlot("details", {});
@@ -1820,6 +2406,13 @@ window.__ModuleLoader__.load({
 				order: 3,
 				label: () => "MCP 管理"
 			}, MCPSection)), "vscode-layout: settings mcp section");
+			// 注册「Git 配置」设置分区
+			ctx.effect(() => ctx.slots.inject("settings.section", () => ctx.slots.register({
+				name: "settings.section",
+				id: "gitConfig",
+				order: 4,
+				label: () => "Git 配置"
+			}, GitConfigSection)), "vscode-layout: settings git config section");
 			ctx.effect(() => {
 				const presenter = new ThemePresenter();
 				presenter.apply(ctx.theme.getTheme());

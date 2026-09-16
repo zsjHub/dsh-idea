@@ -1,0 +1,8 @@
+{
+  "name": "@anoslide/dsh-ai-report",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "lib/index.js",
+  "description": "AI 数据叙事分析：读取 Excel 并生成 ECharts 离线报表"
+}

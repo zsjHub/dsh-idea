@@ -112,11 +112,17 @@ if ($skipped -gt 0) {
 
 if ($applied -eq $patchFiles.Count) {
     Write-Host ""
-    Write-Host "All patches applied successfully! You can now start dsh:" -ForegroundColor Green
-    Write-Host "  cd $HarnessPath" -ForegroundColor Cyan
-    Write-Host "  pnpm dsh web" -ForegroundColor Cyan
+    Write-Host "All patches applied successfully!" -ForegroundColor Green
+    Write-Host ""
+    Write-Host "Next steps:" -ForegroundColor Cyan
+    Write-Host "  1. Install dsh-market (plugin marketplace):" -ForegroundColor Cyan
+    Write-Host "     cd $HarnessPath" -ForegroundColor Cyan
+    Write-Host "     pnpm dsh plugin --profile web add dshmarket" -ForegroundColor Cyan
+    Write-Host "  2. Start dsh:" -ForegroundColor Cyan
+    Write-Host "     pnpm dsh web" -ForegroundColor Cyan
     Write-Host ""
     Write-Host "Note: dsh runs from source (tsx), patches take effect immediately."
+    Write-Host "dsh-market provides a visual plugin marketplace in Settings → Plugin Market."
 }
 
 Write-Host ""

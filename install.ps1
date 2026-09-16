@@ -115,6 +115,17 @@ if (Test-Path $targetCfg) {
     Write-Host "[5/5] 配置已写入 -> $targetCfg"
 }
 
+# 7) 安装 dsh-market（社区插件市场）
+Write-Host "[6/6] 安装 dsh-market（社区插件市场）..."
+try {
+    dsh plugin --profile web add dshmarket *>&1 | Out-Null
+    Write-Host "      已安装 dshmarket（如已存在则跳过）"
+    Write-Host "      重启 dsh web 后，Settings → Plugin Market 可用"
+} catch {
+    Write-Host "      dsh-market 安装失败（可稍后手动安装）" -ForegroundColor Yellow
+    Write-Host "      手动安装: dsh plugin --profile web add dshmarket"
+}
+
 Write-Host ''
 Write-Host '===== 安装完成！启动方式 ====='
 Write-Host '  1) 双击桌面「启动 dsh IDE」图标'
@@ -126,5 +137,6 @@ Write-Host '  - MCP server 在 dsh 设置面板「MCP 管理」中添加（数�
 Write-Host '  - 补丁按当前 dsh 版本制作，若你的版本不同可能部分失效，'
 Write-Host '    但核心布局（自研插件）不受影响。'
 Write-Host '  - 源码模式用户请用 apply-patches.ps1 而不是本脚本。'
+Write-Host '  - dsh-market 已安装，重启后可在 Settings → Plugin Market 中浏览/安装社区插件。'
 Write-Host ''
 Read-Host '按回车键关闭此窗口'

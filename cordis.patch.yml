@@ -2,6 +2,14 @@
 # a top-level YAML array of loader patch entries (id-targeted config
 # overrides, disables, and insert lists; `!!js` expressions allowed).
 
+# ── VS Code 布局魔改：禁用官方布局，改用自研三栏布局 ──
+- id: ui-layout
+  disabled: true
+  
+# ── 监控面板：TokenTracker 反向代理 + 标签页 ──
+- id: dsh-monitor-web
+  name: 'dsh-monitor/web'
+  config: {}
 # ── VS Code 布局魔改：文件树/查看器/全局人设/MCP 管理的宿主接口 ──
 - insert:
     - id: vscode-host-files
@@ -11,3 +19,19 @@
 - insert:
     - id: vscode-client-layout
       name: '@anoslide/dsh-client-idea'
+
+# ── 会议纪要录音插件 ──
+- insert:
+    - id: dsh-meeting-recorder
+      name: dsh-meeting-recorder
+      config: {}
+
+# ── AI 数据叙事分析：读取 Excel 并生成 ECharts 离线报表 ──
+- insert:
+    - id: dsh-ai-report
+      name: '@anoslide/dsh-ai-report'
+
+# ── 文件上传：在聊天输入框添加文件上传按钮，支持上传 Excel 文件到 AI 分析 ──
+- insert:
+    - id: dsh-upload-file
+      name: '@anoslide/dsh-upload-file'

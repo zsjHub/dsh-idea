@@ -99,11 +99,18 @@ fi
 
 if [ "$APPLIED" -eq "${#PATCH_FILES[@]}" ]; then
     echo ""
-    echo "All patches applied successfully! You can now start dsh:"
-    echo "  cd $HARNESS_PATH"
-    echo "  pnpm dsh web"
+    echo "All patches applied successfully!"
+    echo ""
+    echo "Next steps:"
+    echo "  1. Install dsh-market (plugin marketplace):"
+    echo "     cd $HARNESS_PATH"
+    echo "     pnpm dsh plugin --profile web add dshmarket"
+    echo "  2. Start dsh:"
+    echo "     cd $HARNESS_PATH"
+    echo "     pnpm dsh web"
     echo ""
     echo "Note: dsh runs from source (tsx), patches take effect immediately."
+    echo "dsh-market provides a visual plugin marketplace in Settings → Plugin Market."
 fi
 
 echo ""
